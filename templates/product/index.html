@@ -1,0 +1,215 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ product.title }}{% endblock %}
+
+{% block content %}
+
+{% set analysis = product.product_analysis.analysis_json if product.product_analysis else {} %}
+{% set scores = analysis.get("scores", {}) %}
+
+<div class="page-body">
+<div class="container-xl">
+
+    <!-- Header -->
+    <div class="page-header mb-3">
+        <div class="row align-items-center">
+
+            <div class="col">
+
+                <h2 class="page-title">
+                    {{ product.title }}
+                </h2>
+
+            </div>
+
+            <div class="col-auto">
+
+                <a href="{{ product.product_link }}"
+                   target="_blank"
+                   class="btn btn-primary">
+                    Open TikTok
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="row">
+
+        <!-- LEFT -->
+        <div class="col-lg-4">
+
+            <div class="card">
+
+                <div class="card-body text-center">
+
+                    <img
+                        src="/static/products/{{ product.tiktok_id_product }}/product/1.jpg"
+                        class="img-fluid rounded"
+                        alt="{{ product.title }}">
+
+                </div>
+
+            </div>
+
+            <div class="card mt-3">
+
+                <div class="card-header">
+                    Basic Information
+                </div>
+
+                <div class="card-body">
+
+                    <table class="table table-sm">
+
+                        <tr>
+                            <td>Harga</td>
+                            <td>Rp {{ "{:,}".format(product.price).replace(",", ".") }}</td>
+                        </tr>
+
+                        <tr>
+                            <td>Komisi</td>
+                            <td>Rp {{ "{:,}".format(product.komisi).replace(",", ".") }}</td>
+                        </tr>
+
+                        <tr>
+                            <td>Rating</td>
+                            <td>{{ product.rating }}</td>
+                        </tr>
+
+                        <tr>
+                            <td>Sold</td>
+                            <td>{{ product.sold }}</td>
+                        </tr>
+
+                        <tr>
+                            <td>Creator</td>
+                            <td>{{ product.jumlah_kreator }}</td>
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RIGHT -->
+        <div class="col-lg-8">
+
+            <div class="card">
+
+                <div class="card-header">
+                    Opportunity Score
+                </div>
+
+                <div class="card-body text-center">
+
+                    <div style="font-size:70px;font-weight:bold;color:{{ analysis.get('color','white') }}">
+                        {{ analysis.get("rating","-") }}
+                    </div>
+
+                    <div class="text-secondary">
+                        Score
+                    </div>
+
+                    <div style="font-size:40px;font-weight:bold;">
+                        {{ analysis.get("opportunity_score",0) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="card mt-3">
+
+                <div class="card-header">
+                    Summary
+                </div>
+
+                <div class="card-body">
+
+                    <ul>
+
+                        {% for item in analysis.get("summary", []) %}
+
+                            <li>{{ item }}</li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+
+            <div class="card mt-3">
+
+                <div class="card-header">
+                    Engine Analysis
+                </div>
+
+                <div class="card-body">
+
+                    {% for key, score in scores.items() %}
+
+                        <div class="mb-3">
+
+                            <div class="d-flex justify-content-between">
+
+                                <strong>{{ score.name }}</strong>
+
+                                <span>{{ score.score }}</span>
+
+                            </div>
+
+                            <div class="progress">
+
+                                <div
+                                    class="progress-bar"
+                                    style="width: {{ score.score }}%;">
+                                </div>
+
+                            </div>
+
+                            <small class="text-secondary">
+                                {{ score.description }}
+                            </small>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <div class="card mt-3">
+
+                <div class="card-header">
+                    AI Analysis
+                </div>
+
+                <div class="card-body">
+
+                    <pre style="white-space:pre-wrap;font-family:inherit;">{{ product.llm_analysis.llm_analysis }}</pre>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+</div>
+
+{% endblock %}

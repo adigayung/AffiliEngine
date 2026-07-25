@@ -1,0 +1,553 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Video Pipeline{% endblock %}
+
+{% block content %}
+
+<style>
+
+#logConsole{
+
+    height:420px;
+
+    overflow-y:auto;
+
+    background:#0d1117;
+
+    font-family:Consolas, "Courier New", monospace;
+
+    font-size:20px;
+
+    color:#f0f6fc;
+
+    border-radius:0 0 .5rem .5rem;
+
+}
+
+.log-header{
+
+    position:sticky;
+
+    top:0;
+
+    display:flex;
+
+    align-items:center;
+
+    padding:10px 14px;
+
+    background:#161b22;
+
+    border-bottom:1px solid #30363d;
+
+    font-weight:600;
+
+    color:#8b949e;
+
+    z-index:10;
+
+}
+
+.log-header .time{
+
+    width:90px;
+
+}
+
+.log-header .type{
+
+    width:100px;
+
+}
+
+.log-header .message{
+
+    flex:1;
+
+}
+
+.log-row{
+
+    display:flex;
+
+    align-items:flex-start;
+
+    padding:6px 14px;
+
+    border-bottom:1px solid rgba(255,255,255,.05);
+
+    line-height:1.45;
+
+}
+
+.log-row:hover{
+
+    background:#161b22;
+
+}
+
+.log-time{
+
+    width:90px;
+
+    color:#8b949e;
+
+    flex-shrink:0;
+
+}
+
+.log-level{
+
+    width:100px;
+
+    flex-shrink:0;
+
+}
+
+.log-message{
+
+    flex:1;
+
+    color:#f0f6fc;
+
+    word-break:break-word;
+
+}
+
+.badge-log{
+
+    display:inline-block;
+
+    width:80px;
+
+    text-align:center;
+
+    padding:3px 8px;
+
+    border-radius:5px;
+
+    font-size:11px;
+
+    font-weight:700;
+
+}
+
+.badge-info{
+
+    background:#1f6feb;
+
+    color:#fff;
+
+}
+
+.badge-success{
+
+    background:#238636;
+
+    color:#fff;
+
+}
+
+.badge-warning{
+
+    background:#9e6a03;
+
+    color:#fff;
+
+}
+
+.badge-danger{
+
+    background:#da3633;
+
+    color:#fff;
+
+}
+
+.badge-command{
+
+    background:#8250df;
+
+    color:#fff;
+
+}
+
+.badge-send{
+
+    background:#0969da;
+
+    color:#fff;
+
+}
+
+.badge-receive{
+
+    background:#2da44e;
+
+    color:#fff;
+
+}
+
+.badge-system{
+
+    background:#57606a;
+
+    color:#fff;
+
+}
+
+.log-divider{
+
+    height:1px;
+
+    background:#30363d;
+
+    margin:6px 0;
+
+}
+
+</style>
+
+<div class="page-wrapper">
+
+    <!-- Page Header -->
+    <div class="page-header d-print-none">
+
+        <div class="container-xl">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <h2 class="page-title">
+
+                    <i class="ti ti-video me-2"></i>
+
+                    Video Pipeline
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Page Body -->
+    <div class="page-body">
+
+        <div class="container-xl">
+
+            <!-- Pipeline Configuration -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h3 class="card-title">
+
+                        <i class="ti ti-settings me-1"></i>
+
+                        Pipeline Configuration
+
+                    </h3>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+
+                            Video Root Path
+
+                        </label>
+
+                        <input
+
+                            id="rootPath"
+
+                            type="text"
+
+                            class="form-control"
+
+                            placeholder="Contoh: E:\tiktok\creator01"
+
+                            autocomplete="off">
+
+                    </div>
+
+                    <div class="mt-4">
+
+                        <button
+
+                            id="btnCreate"
+
+                            class="btn btn-success">
+
+                            <i class="ti ti-player-play-filled me-1"></i>
+
+                            Create Video
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Pipeline Console -->
+            <div class="card mt-2">
+
+                <div class="card-header">
+
+                    <div class="d-flex justify-content-between align-items-center w-100">
+
+                        <h3 class="card-title mb-0">
+
+                            <i class="ti ti-terminal-2 me-2"></i>
+
+                            Log
+
+                        </h3>
+
+                        <span
+
+                            id="logStatus"
+
+                            class="badge bg-green-lt">
+
+                            READY
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div id="logConsole">
+
+                    <div class="log-header">
+
+                        <div class="time">
+
+                            TIME
+
+                        </div>
+
+                        <div class="type">
+
+                            TYPE
+
+                        </div>
+
+                        <div class="message">
+
+                            MESSAGE
+
+                        </div>
+
+                    </div>
+
+                    <!-- JavaScript append log di sini -->
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const rootPath = document.getElementById("rootPath");
+const btnCreate = document.getElementById("btnCreate");
+
+let isRunning = false;
+
+
+/* ==========================================================
+   Create Button
+========================================================== */
+
+function setButtonState(running) {
+
+    isRunning = running;
+
+    if (running) {
+
+        btnCreate.disabled = false;
+
+        btnCreate.classList.remove("btn-success");
+        btnCreate.classList.add("btn-danger");
+
+        btnCreate.innerHTML = `
+
+            <i class="ti ti-player-stop-filled me-1"></i>
+
+            STOP
+
+        `;
+
+        rootPath.disabled = true;
+
+    }
+
+    else {
+
+        btnCreate.classList.remove("btn-danger");
+        btnCreate.classList.add("btn-success");
+
+        btnCreate.innerHTML = `
+
+            <i class="ti ti-player-play-filled me-1"></i>
+
+            Create Video
+
+        `;
+
+        rootPath.disabled = false;
+
+    }
+
+}
+
+
+/* ==========================================================
+   Create / Stop
+========================================================== */
+
+btnCreate.addEventListener("click", async function () {
+
+    if (isRunning) {
+
+        // For now, stop is not implemented - refresh page to stop
+        const ok = confirm(
+
+            "Tidak dapat menghentikan pipeline dari sini.\n\nRefresh halaman untuk status terbaru."
+
+        );
+
+        if (ok) {
+
+            window.location.reload();
+
+        }
+
+        return;
+
+    }
+
+    const path = rootPath.value.trim();
+
+    if (path.length === 0) {
+
+        alert("Video Root Path masih kosong.");
+
+        return;
+
+    }
+
+    const form = new FormData();
+
+    form.append("root_path", path);
+
+    try {
+
+        const response = await fetch("/video_pipeline/start", {
+
+            method: "POST",
+
+            body: form
+
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            setButtonState(true);
+
+        }
+
+        else {
+
+            alert(result.message || "Gagal memulai pipeline.");
+
+        }
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+        alert("Tidak dapat terhubung ke server.");
+
+    }
+
+});
+
+
+/* ==========================================================
+   Status Polling
+========================================================== */
+
+async function updateStatus() {
+
+    try {
+
+        const res = await fetch("/video_pipeline/status");
+
+        const data = await res.json();
+
+        setButtonState(data.running);
+
+        document.getElementById("logStatus").textContent =
+
+            data.running ? "RUNNING" : "READY";
+
+        const consoleDiv = document.getElementById("logConsole");
+
+        const header = consoleDiv.querySelector(".log-header");
+
+        consoleDiv.innerHTML = "";
+
+        consoleDiv.appendChild(header);
+
+        if (Array.isArray(data.logs)) {
+
+            data.logs.forEach(log => {
+
+                consoleDiv.insertAdjacentHTML("beforeend", log);
+
+            });
+
+        }
+
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+    }
+
+}
+
+
+/* ==========================================================
+   Init
+========================================================== */
+
+updateStatus();
+
+setInterval(updateStatus, 1000);
+
+</script>
+
+{% endblock %}

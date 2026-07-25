@@ -1,0 +1,48 @@
+<form method="POST" action="/setting/app/save">
+
+<div class="mb-3">
+    <label class="form-label">App Name</label>
+    <input type="text" class="form-control" name="app_name" id="app_name">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Version</label>
+    <input type="text" class="form-control" name="version" id="version">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Debug Mode</label>
+    <select class="form-select" name="debug" id="debug">
+        <option value="True">True</option>
+        <option value="False">False</option>
+    </select>
+</div>
+
+<button class="btn btn-primary" type="submit">
+    Save App Settings
+</button>
+
+</form>
+
+<script>
+
+async function loadAppConfig() {
+
+    try {
+        const res = await fetch("/setting/app/config");
+        const data = await res.json();
+
+        document.getElementById("app_name").value = data.app_name || "";
+        document.getElementById("version").value = data.version || "";
+
+        document.getElementById("debug").value =
+            data.debug ? "True" : "False";
+
+    } catch (err) {
+        console.error("Failed to load app config:", err);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", loadAppConfig);
+
+</script>

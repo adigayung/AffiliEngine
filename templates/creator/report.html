@@ -1,0 +1,272 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+{% set data = report_data %}
+{% set creator = data.creator %}
+
+<!-- PAGE HEADER -->
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="ti ti-calendar-stats me-2"></i>
+                Creator Upload Schedule
+            </h2>
+            <div class="text-muted mt-1">
+                Monitoring jadwal upload milik <strong>{{ creator.display_name or creator.username }}</strong>
+            </div>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <a href="/creator/{{ creator.id }}/product-exposure" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-box me-2"></i>
+                Product Exposure
+            </a>
+            <a href="/creator/{{ creator.id }}/video_performance" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-video me-2"></i>
+                Video Performance
+            </a>
+            <a href="/" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-arrow-left me-2"></i>
+                Kembali
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- CREATOR INFO -->
+<div class="card card-lg mb-4">
+    <div class="card-body">
+        <div class="row align-items-center g-3">
+
+            <!-- AVATAR -->
+            <div class="col-auto">
+                {% if creator.profile_image %}
+                <span class="avatar avatar-xl" style="background-image: url({{ creator.profile_image }})"></span>
+                {% else %}
+                <span class="avatar avatar-xl bg-dark-lt">
+                    <i class="ti ti-user fs-1"></i>
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- NAMA + USERNAME (flex-grow-1 agar mengisi residu) -->
+            <div class="col-auto flex-grow-1" style="min-width: 0;">
+                <div class="fw-bold fs-4 lh-sm text-nowrap">{{ creator.display_name or creator.username }}</div>
+                <div class="text-muted small text-nowrap">@{{ creator.username }}</div>
+            </div>
+
+            <!-- STATISTIK (flex-shrink-0 agar tidak ikut menyusut) -->
+            <div class="col-auto flex-shrink-0">
+                <div class="row gx-3 gy-1 align-items-center justify-content-end text-center text-sm-end">
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Total</div>
+                        <div class="fw-bold fs-5">{{ data.total_jadwal }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Uploaded</div>
+                        <div class="fw-bold fs-5 text-green">{{ data.total_uploaded }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Scheduled</div>
+                        <div class="fw-bold fs-5 text-blue">{{ data.total_scheduled }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Pending</div>
+                        <div class="fw-bold fs-5 text-yellow">{{ data.total_pending }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Failed</div>
+                        <div class="fw-bold fs-5 text-red">{{ data.total_failed }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Rata-rata</div>
+                        <div class="fw-bold fs-5">{{ data.rata_rata_per_hari }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Pertama</div>
+                        <div class="fw-bold fs-6">
+                            {% if data.tanggal_pertama %}
+                            {{ data.tanggal_pertama }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-muted extra-small">Terakhir</div>
+                        <div class="fw-bold fs-6">
+                            {% if data.tanggal_terakhir %}
+                            {{ data.tanggal_terakhir }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROGRESS (flex-shrink-0) -->
+            <div class="col-auto flex-shrink-0 ps-3 border-start">
+                <div class="text-center">
+                    <div class="text-muted extra-small">Progress</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress progress-sm" style="width: 100px;">
+                            <div class="progress-bar bg-green"
+                                 style="width: {{ data.upload_progress }}%"
+                                 role="progressbar"
+                                 aria-valuenow="{{ data.upload_progress }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                        <span class="fw-bold small">{{ data.upload_progress }}%</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- UPLOAD SCHEDULE CARDS -->
+{% if data.days %}
+
+    {% for day in data.days %}
+    {% set s = day.summary %}
+
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <h3 class="card-title mb-0">
+                <i class="ti ti-calendar-event me-2"></i>
+                {{ day.nama_hari }}, {{ day.tanggal_formatted }}
+            </h3>
+            <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+                <span class="fw-medium small">{{ s.total }} Upload</span>
+                {% if s.uploaded > 0 %}
+                <span class="badge bg-green-lt text-green">{{ s.uploaded }} Uploaded</span>
+                {% endif %}
+                {% if s.scheduled > 0 %}
+                <span class="badge bg-blue-lt text-blue">{{ s.scheduled }} Scheduled</span>
+                {% endif %}
+                {% if s.pending > 0 %}
+                <span class="badge bg-yellow-lt text-yellow">{{ s.pending }} Pending</span>
+                {% endif %}
+                {% if s.failed > 0 %}
+                <span class="badge bg-red-lt text-red">{{ s.failed }} Failed</span>
+                {% endif %}
+                {% if s.cancelled > 0 %}
+                <span class="badge bg-secondary-lt">{{ s.cancelled }} Cancelled</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+                {% for up in day.uploads %}
+                <div class="col-12 col-md-6 col-xl-3">
+                    <a
+                        href="{{ up.product_url }}"
+                        target="_blank"
+                        class="text-reset text-decoration-none d-block h-100"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        data-bs-html="true"
+                        title="{{ up.tooltip_text }}">
+
+                        <div class="card card-sm h-100 upload-card">
+                            <div class="card-body p-2">
+
+                                {% if up.thumbnail %}
+                                <div class="text-center mb-2">
+                                    <img
+                                        src="{{ up.thumbnail }}"
+                                        alt="{{ up.product_name }}"
+                                        class="img-fluid rounded"
+                                        style="max-width: 80px; max-height: 80px; object-fit: cover;"
+                                        loading="lazy"
+                                        onerror="this.style.display='none'">
+                                </div>
+                                {% endif %}
+
+                                <div class="fw-medium small text-truncate mb-1"
+                                     title="{{ up.product_name }}">
+                                    {{ up.product_name }}
+                                </div>
+
+                                <div class="text-muted small mb-1">
+                                    <i class="ti ti-clock"></i> {{ up.jam_upload }}
+                                </div>
+
+                                <div>
+                                    <span class="badge {{ up.status_badge_class }} w-100">
+                                        <i class="ti {{ up.status_badge_icon }} me-1"></i>
+                                        {{ up.status_badge_label }}
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% endfor %}
+
+{% else %}
+
+<div class="card">
+    <div class="card-body text-center py-5">
+        <div class="mb-3">
+            <i class="ti ti-calendar-off text-muted fs-1"></i>
+        </div>
+        <h4 class="text-muted">Belum ada jadwal upload</h4>
+        <p class="text-secondary mb-0">
+            Creator <strong>{{ creator.display_name or creator.username }}</strong> belum memiliki
+            jadwal upload yang tercatat di sistem.
+        </p>
+    </div>
+</div>
+
+{% endif %}
+
+<style>
+.upload-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+}
+.upload-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+.upload-card .card-body {
+    min-height: 100%;
+}
+.extra-small {
+    font-size: 0.65rem;
+    line-height: 1.2;
+}
+@media (max-width: 768px) {
+    .text-nowrap {
+        white-space: normal !important;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function(el) {
+        new bootstrap.Tooltip(el, {
+            boundary: 'window',
+            html: true,
+            placement: 'top'
+        });
+    });
+});
+</script>
+
+{% endblock %}

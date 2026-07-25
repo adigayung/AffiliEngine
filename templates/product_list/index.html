@@ -1,0 +1,540 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="page-header d-print-none mb-3">
+    <div class="container-xl">
+
+        <div class="row g-2 align-items-center">
+
+            <div class="col">
+
+                <h2 class="page-title">
+                    Product List
+                </h2>
+
+                <div class="text-secondary">
+                    All analyzed TikTok products stored in database.
+                </div>
+
+            </div>
+
+            <div class="col-auto">
+
+                <a href="/product-rating" class="btn btn-primary">
+                    Analyze New Product
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<div class="container-xl">
+
+    <!-- FILTER -->
+    <div class="card mb-3">
+
+        <div class="card-body">
+
+            <div class="row g-3">
+
+                <div class="col-md-4">
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        placeholder="Search product..."
+                    >
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <select class="form-select">
+                        <option>All Decision</option>
+                        <option>BUY</option>
+                        <option>HOLD</option>
+                        <option>REJECT</option>
+                    </select>
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <select class="form-select">
+                        <option>Newest</option>
+                        <option>Highest Score</option>
+                        <option>Highest Sold</option>
+                        <option>Highest Rating</option>
+                    </select>
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <button class="btn btn-primary w-100">
+                        Search
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- TABLE -->
+    <div class="card">
+
+        <div class="card-header">
+
+            <h3 class="card-title">Product List</h3>
+
+            <div class="card-actions">
+
+                <button class="btn btn-sm btn-outline-primary">
+                    Compare
+                </button>
+
+                <button class="btn btn-sm btn-outline-danger">
+                    Delete
+                </button>
+
+                <button class="btn btn-sm btn-outline-success">
+                    Save List
+                </button>
+
+                <button class="btn btn-sm btn-outline-secondary">
+                    Dump Product
+                </button>
+
+                <button
+                    class="btn btn-sm btn-primary"
+                    onclick="prepareUpload()"
+                >
+                    Prepare Upload
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="table table-vcenter table-hover align-middle">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Product</th>
+
+                        <th class="text-center">Score</th>
+
+                        <th class="text-center">Rating</th>
+
+                        <th class="text-end">Sold</th>
+
+                        <th class="text-end">Commission</th>
+
+                        <th class="text-center" style="width:170px;">Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for p in products %}
+
+                    {% set analysis = p.product_analysis.analysis_json if p.product_analysis else {} %}
+
+                    <tr>
+
+                        <!-- PRODUCT -->
+                        <td>
+                        <style>
+                        /* Ketika product-item dalam kondisi terpilih (active/selected) */
+                        .product-item.active .product-avatar,
+                        .product-item.selected .product-avatar {
+                            border-color: #2fb344 !important; /* Warna hijau khas Tabler/Bootstrap */
+                            box-shadow: 0 0 0 3px rgba(47, 179, 68, 0.15); /* Efek glow tipis agar makin keren */
+                        }
+
+                        .product-item.active .select-badge,
+                        .product-item.selected .select-badge {
+                            display: flex !important; /* Memaksa badge check muncul */
+                        }
+
+                        /* Tambahan efek hover biar interaktif */
+                        .product-item {
+                            cursor: pointer;
+                            transition: background 0.1s ease;
+                        }
+                        .product-item:hover {
+                            background-color: rgba(0, 0, 0, 0.02);
+                        }
+                        </style>
+                            <div class="d-flex align-items-center product-item" onclick="toggleProduct(this, '{{ p.tiktok_id_product }}')">
+
+                                <div class="position-relative me-3">
+                                    
+                                    <span class="avatar avatar-lg product-avatar" style="
+                                        width:72px;
+                                        height:72px;
+                                        background-image:url('{{ url_for('static', filename='products/' ~ p.tiktok_id_product ~ '/product/1.jpg') }}');
+                                        background-size:cover;
+                                        background-position:center;
+                                        border: 2px solid transparent; /* Border transparan default */
+                                        transition: all 0.2s ease;
+                                    "></span>
+
+                                    <span class="select-badge position-absolute top-0 start-100 translate-middle badge rounded-circle bg-success text-white p-1 d-none" 
+                                        style="z-index: 3; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="ti ti-check" style="font-size: 12px; stroke-width: 3;"></i>
+                                    </span>
+
+                                </div>
+
+                                <div class="flex-fill">
+                                    <div class="fw-bold text-truncate" style="max-width:250px;">
+                                        {{ p.title.split()[:5] | join(' ') }}
+                                    </div>
+                                    <div class="small text-secondary">
+                                        ID : {{ p.tiktok_id_product }}
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                        <!-- SCORE -->
+                        <td class="text-center">
+
+                            <div class="border rounded px-3 py-2 d-inline-block">
+
+                                <div class="small text-secondary">
+                                    Score
+                                </div>
+
+                                <div class="fs-2 fw-bold">
+                                    {{ analysis.get("opportunity_score", 0) }}
+                                </div>
+
+                                <span
+                                    class="fw-bold"
+                                    style="color:{{ analysis.get('color', '#6c757d') }}; font-size:18px;">
+
+                                    {{ analysis.get("rating", "-") }}
+
+                                </span>
+
+                            </div>
+
+                        </td>
+
+                        <!-- RATING -->
+                        <td class="text-center">
+
+                            <span class="badge bg-azure-lt text-azure">
+
+                                ⭐ {{ "%.1f"|format(p.rating or 0) }}
+
+                            </span>
+
+                        </td>
+
+                        <!-- SOLD -->
+                        <td class="text-end fw-semibold">
+
+                            {{ "{:,}".format(p.sold or 0) }}
+
+                        </td>
+
+                        <!-- COMMISSION -->
+                        <td class="text-end">
+
+                            <span class="fw-bold text-success">
+
+                                Rp {{ "{:,}".format(p.komisi or 0) }}
+
+                            </span>
+
+                        </td>
+
+                        <!-- ACTION -->
+                        <td class="text-center">
+
+                            <div class="btn-group">
+
+                                <button
+                                    class="btn btn-icon btn-outline-primary"
+                                    title="View Product"
+                                    onclick="selectProduct('{{ p.tiktok_id_product }}')">
+
+                                    <i class="ti ti-eye"></i>
+
+                                </button>
+
+                                <button
+                                    class="btn btn-icon btn-outline-warning"
+                                    title="Re Analyze">
+
+                                    <i class="ti ti-refresh"></i>
+
+                                </button>
+
+                                <button
+                                    class="btn btn-icon btn-outline-danger btn-remove-product"
+                                    data-product-id="{{ p.id }}"
+                                    data-product-title="{{ p.title }}"
+                                    data-product-image="/static/products/{{ p.tiktok_id_product }}/product/1.jpg"
+                                    title="Delete Product">
+
+                                    <i class="ti ti-trash"></i>
+
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="6" class="text-center text-muted py-5">
+
+                            No products found
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Modal Remove Product -->
+<div class="modal modal-blur fade" id="modalRemoveProduct" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Remove Product
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="d-flex align-items-center">
+
+                    <img
+                        id="removeProductImage"
+                        src=""
+                        class="rounded me-3 flex-shrink-0"
+                        style="
+                            width:72px;
+                            height:72px;
+                            object-fit:cover;
+                            border:1px solid #e9ecef;
+                        ">
+
+                    <div class="flex-fill">
+
+                        <div
+                            id="removeProductName"
+                            class="fw-bold"
+                            style="
+                                line-height:1.35;
+                                word-break:break-word;
+                            ">
+                        </div>
+
+                        <div
+                            class="text-secondary mt-2"
+                            style="font-size:13px;">
+
+                            Are you sure you want to remove this product?
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
+                    No
+
+                </button>
+
+                <button
+                    class="btn btn-danger"
+                    id="btnConfirmRemoveProduct">
+
+                    Yes, Remove
+
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+
+const selectedProducts = new Set();
+
+function toggleProduct(element, productId) {
+    const badge = element.querySelector(".select-badge");
+
+    if (selectedProducts.has(productId)) {
+        // batal pilih
+        selectedProducts.delete(productId);
+        element.classList.remove("active");
+        if (badge) {
+            badge.classList.add("d-none");
+        }
+        console.log(`Produk dengan ID: ${productId} BATAL DIPILIH.`);
+
+    } else {
+        // pilih produk
+        selectedProducts.add(productId);
+        element.classList.add("active");
+        if (badge) {
+            badge.classList.remove("d-none");
+        }
+        console.log(`Produk dengan ID: ${productId} DIPILIH.`);
+    }
+    console.log("Selected Products:", [...selectedProducts]);
+}
+
+function selectProduct(productId) {
+    window.open("/product/" + productId, "_blank");
+}
+
+function prepareUpload() {
+
+    if (selectedProducts.size === 0) {
+
+        alert("Pilih produk terlebih dahulu.");
+        return;
+
+    }
+
+    const form = document.createElement("form");
+
+    form.method = "POST";
+    form.action = "/product_list/prepare_upload/videos";
+
+    const input = document.createElement("input");
+
+    input.type = "hidden";
+    input.name = "products";
+    input.value = JSON.stringify([...selectedProducts]);
+
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+
+    form.submit();
+
+}
+
+let removeProductId = null;
+
+const removeModal = new bootstrap.Modal(
+    document.getElementById("modalRemoveProduct")
+);
+
+function shortTitle(title) {
+
+    if (!title)
+        return "";
+
+    const words = title.trim().split(/\s+/);
+
+    if (words.length <= 4)
+        return title;
+
+    return words.slice(0, 4).join(" ") + " ...";
+
+}
+
+document.querySelectorAll(".btn-remove-product").forEach(btn => {
+
+    btn.addEventListener("click", () => {
+
+        removeProductId = btn.dataset.productId;
+
+        document.getElementById("removeProductName").textContent =
+            shortTitle(btn.dataset.productTitle);
+
+        document.getElementById("removeProductImage").src =
+            btn.dataset.productImage;
+
+        removeModal.show();
+
+    });
+
+});
+
+document
+    .getElementById("btnConfirmRemoveProduct")
+    .addEventListener("click", async () => {
+
+        if (!removeProductId)
+            return;
+
+        const response = await fetch(
+            `/product_list/remove/${removeProductId}`,
+            {
+                method: "POST"
+            }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            location.reload();
+
+        } else {
+
+            alert(result.message);
+
+        }
+
+    });
+</script>
+{% endblock %}

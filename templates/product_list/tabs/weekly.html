@@ -1,0 +1,393 @@
+<div class="card border-0">
+
+    <div class="card-body">
+
+        <h3 class="mb-3">
+            Weekly Upload Schedule
+        </h3>
+
+        <p class="text-secondary mb-4">
+            Atur jam upload berbeda untuk setiap hari dalam seminggu.
+            Jadwal ini akan diulang terus hingga seluruh video selesai di-upload.
+        </p>
+
+
+        <div class="row mb-4">
+
+            <div class="col-md-4">
+
+                <label class="form-label">
+                    Start Date
+                </label>
+
+                <input
+                    type="date"
+                    class="form-control"
+                    id="weekly_start_date">
+
+            </div>
+
+        </div>
+
+
+        {% set days = [
+            ('Monday', 'Senin'),
+            ('Tuesday', 'Selasa'),
+            ('Wednesday', 'Rabu'),
+            ('Thursday', 'Kamis'),
+            ('Friday', 'Jumat'),
+            ('Saturday', 'Sabtu'),
+            ('Sunday', 'Minggu')
+        ] %}
+
+
+        {% for day_en, day_id in days %}
+
+        <div 
+            class="card mb-3 weekly-day"
+            data-day="{{ day_en }}"
+        >
+
+            <div class="card-body">
+
+
+                <div class="row align-items-end">
+
+
+                    <div class="col-md-2">
+
+                        <h4 class="mb-0">
+
+                            {{ day_id }}
+
+                        </h4>
+
+                    </div>
+
+
+
+                    <div class="col-md-3">
+
+
+                        <label class="form-label">
+
+                            Upload Time
+
+                        </label>
+
+
+                        <input
+                                                        type="time"
+                            class="form-control"
+                            id="{{ day_en|lower }}_time">
+
+
+                    </div>
+
+
+
+                    <div class="col-md-auto">
+
+
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            onclick="addWeeklyTime('{{ day_en }}')">
+
+
+                            <i class="ti ti-plus me-1"></i>
+
+                            Add
+
+
+                        </button>
+
+
+                    </div>
+
+
+                </div>
+
+
+
+                <div
+                    id="{{ day_en|lower }}_list"
+                    class="mt-3 weekly-time-list">
+
+
+                    <span class="text-secondary">
+
+                        No upload schedule.
+
+                    </span>
+
+
+                </div>
+
+
+
+            </div>
+
+
+        </div>
+
+
+        {% endfor %}
+
+
+
+        <hr>
+
+
+        <div class="d-flex justify-content-end">
+
+
+            <button
+                id="btnNext"
+                type="button"
+                class="btn btn-primary"
+                onclick="submitWeeklySchedule()">
+
+
+                Next
+
+
+                <i class="ti ti-arrow-right ms-2"></i>
+
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+<script>
+const weeklySchedule = {
+
+    Monday: [],
+
+    Tuesday: [],
+
+    Wednesday: [],
+
+    Thursday: [],
+
+    Friday: [],
+
+    Saturday: [],
+
+    Sunday: []
+
+};
+
+
+function addWeeklyTime(day){
+
+    day = day.charAt(0).toUpperCase() + day.slice(1);
+
+    const input = document.getElementById(
+        day.toLowerCase() + "_time"
+    );
+
+    const value = input.value;
+
+    if(!value){
+
+        alert("Pilih jam upload.");
+
+        return;
+
+    }
+
+    if(weeklySchedule[day].includes(value)){
+
+        alert("Jam sudah ada.");
+
+        return;
+
+    }
+
+    weeklySchedule[day].push(value);
+
+    weeklySchedule[day].sort();
+
+    input.value = "";
+
+    renderWeekly(day);
+
+}
+
+
+function removeWeeklyTime(day,time){
+
+    weeklySchedule[day] = weeklySchedule[day].filter(
+
+        t => t !== time
+
+    );
+
+    renderWeekly(day);
+
+}
+
+
+function renderWeekly(day){
+
+    const div = document.getElementById(
+
+        day.toLowerCase() + "_list"
+
+    );
+
+    const list = weeklySchedule[day];
+
+    if(list.length===0){
+
+        div.innerHTML = `
+
+            <span class="text-secondary">
+
+                No upload schedule.
+
+            </span>
+
+        `;
+
+        return;
+
+    }
+
+    let html = "";
+
+    list.forEach(time=>{
+
+        html += `
+
+        <span class="badge bg-primary text-white me-2 mb-2">
+            ${time}
+
+            <a
+                href="#"
+                class="text-white text-decoration-none ms-2"
+                onclick="removeWeeklyTime('${day}','${time}');return false;">
+
+                ×
+
+            </a>
+
+        </span>
+
+        `;
+
+    });
+
+    div.innerHTML = html;
+
+}
+
+var dayNameMapId = {
+    Monday: 'Senin',
+    Tuesday: 'Selasa',
+    Wednesday: 'Rabu',
+    Thursday: 'Kamis',
+    Friday: 'Jumat',
+    Saturday: 'Sabtu',
+    Sunday: 'Minggu'
+};
+
+var dayOrderEn = [
+    'Monday', 'Tuesday', 'Wednesday',
+    'Thursday', 'Friday', 'Saturday', 'Sunday'
+];
+
+function reorderWeekDays(startDateValue){
+
+    if(!startDateValue) return;
+
+    // Parent sebenarnya dari semua .weekly-day
+    var parent = document.querySelector(".weekly-day").parentElement;
+    var cards = Array.prototype.slice.call(
+        parent.querySelectorAll(".weekly-day")
+    );
+    if(cards.length !== 7) return;
+
+    var startDayIndex = new Date(startDateValue).getDay();
+    var jsDayToIndex = [6, 0, 1, 2, 3, 4, 5];
+    var offset = jsDayToIndex[startDayIndex];
+
+    // Bangun urutan baru berdasarkan offset
+    var newOrder = [];
+    for(var i = 0; i < 7; i++){
+        var targetDayEn = dayOrderEn[(i + offset) % 7];
+        for(var j = 0; j < 7; j++){
+            if(cards[j].getAttribute("data-day") === targetDayEn){
+                newOrder.push(cards[j]);
+                break;
+            }
+        }
+    }
+
+    // Pindahkan card ke urutan baru
+    for(var i = 0; i < newOrder.length; i++){
+        parent.appendChild(newOrder[i]);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+    var startDateInput = document.getElementById("weekly_start_date");
+    if(startDateInput.value){
+        reorderWeekDays(startDateInput.value);
+    }
+    startDateInput.addEventListener("change", function(){
+        reorderWeekDays(this.value);
+    });
+});
+
+function submitWeeklySchedule(){
+
+    const uploadDirectory = document
+    .getElementById("upload_directory")
+    .value
+    .trim();
+
+    if(uploadDirectory === ""){
+
+        alert("Silakan isi Upload Directory.");
+
+        document.getElementById("upload_directory").focus();
+
+        return;
+
+    }
+
+    const startDate = document.getElementById("weekly_start_date").value;
+    if(!startDate){
+        alert("Silakan pilih Start Date.");
+        document.getElementById("weekly_start_date").focus();
+        return;
+    }
+
+    console.log("WEEKLY:", weeklySchedule);
+
+    // Cek creator dulu baru submit
+    checkCreatorAndSubmit(function() {
+
+        const formData = new FormData();
+
+        formData.append("schedule_mode", "weekly");
+        formData.append("products", JSON.stringify(selectedProducts));
+        formData.append("upload_directory", document.getElementById("upload_directory").value.trim());
+        formData.append("start_date", startDate);
+        formData.append("weekly_schedule", JSON.stringify(weeklySchedule));
+
+        submitFormWithFetch(formData);
+
+    });
+
+}
+</script>

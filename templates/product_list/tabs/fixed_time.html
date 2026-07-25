@@ -1,0 +1,234 @@
+<div class="card border-0">
+
+    <div class="card-body">
+
+        <h3 class="mb-3">
+            Fixed Time Upload
+        </h3>
+
+        <p class="text-secondary">
+
+            Upload dilakukan pada jam yang sama setiap hari.
+
+        </p>
+
+        <div class="row mb-4">
+
+            <div class="col-md-4">
+
+                <label class="form-label">
+
+                    Start Date
+
+                </label>
+
+                <input
+                    type="date"
+                    class="form-control"
+                    id="fixed_start_date">
+
+            </div>
+
+        </div>
+
+        <div class="row align-items-end">
+
+            <div class="col-md-4">
+
+                <label class="form-label">
+
+                    Upload Time
+
+                </label>
+
+                <input
+                    type="time"
+                    class="form-control"
+                    id="upload_time">
+
+
+            </div>
+
+            <div class="col-md-auto">
+
+                <button
+                    class="btn btn-primary"
+                    onclick="addUploadTime()">
+
+                    <i class="ti ti-plus me-1"></i>
+
+                    Add Time
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div id="uploadTimeList">
+
+            <div class="text-secondary">
+
+                No upload time added.
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div class="d-flex justify-content-end">
+
+            <button
+                class="btn btn-primary"
+                onclick="sendFixedSchedule()">
+
+                Next
+
+                <i class="ti ti-arrow-right ms-2"></i>
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+let uploadTimes = [];
+
+function addUploadTime() {
+
+    const input = document.getElementById("upload_time");
+    const time = input.value;
+
+    if (!time) {
+        alert("Pilih jam upload.");
+        return;
+    }
+
+    if (uploadTimes.includes(time)) {
+        alert("Jam sudah ada.");
+        return;
+    }
+
+    uploadTimes.push(time);
+    uploadTimes.sort();
+
+    input.value = "";
+
+    renderUploadTimes();
+
+}
+
+function renderUploadTimes() {
+
+    const container = document.getElementById("uploadTimeList");
+
+    container.innerHTML = "";
+
+    uploadTimes.forEach(function(time, index){
+
+        container.innerHTML += `
+
+            <div class="row align-items-end mb-2">
+
+                <div class="col-md-4">
+
+                    <input
+                        type="time"
+                        class="form-control upload-time-item"
+                        value="${time}"
+                        onchange="updateUploadTime(${index}, this.value)">
+
+                </div>
+
+                <div class="col-md-auto">
+
+                    <button
+                        type="button"
+                        class="btn btn-danger"
+                        onclick="removeUploadTime(${index})">
+
+                        <i class="ti ti-trash me-1"></i>
+
+                        Remove
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        `;
+
+    });
+
+}
+
+function updateUploadTime(index, value) {
+
+    uploadTimes[index] = value;
+
+    uploadTimes.sort();
+
+    renderUploadTimes();
+
+}
+
+function removeUploadTime(index) {
+
+    uploadTimes.splice(index, 1);
+
+    renderUploadTimes();
+
+}
+
+function sendFixedSchedule() {
+
+    if (uploadTimes.length === 0) {
+        alert("Tambahkan minimal satu jam upload.");
+        return;
+    }
+
+    const uploadDirectory = document
+    .getElementById("upload_directory")
+    .value
+    .trim();
+
+    if(uploadDirectory === ""){
+
+        alert("Silakan isi Upload Directory.");
+
+        document.getElementById("upload_directory").focus();
+
+        return;
+
+    }
+
+    const startDate = document.getElementById("fixed_start_date").value;
+    if(!startDate){
+        alert("Silakan pilih Start Date.");
+        document.getElementById("fixed_start_date").focus();
+        return;
+    }
+
+    // Cek creator dulu baru submit
+    checkCreatorAndSubmit(function() {
+
+        const formData = new FormData();
+
+        formData.append("schedule_mode", "fixed");
+        formData.append("products", JSON.stringify(selectedProducts));
+        formData.append("upload_directory", document.getElementById("upload_directory").value.trim());
+        formData.append("start_date", startDate);
+        formData.append("upload_times", JSON.stringify(uploadTimes));
+
+        submitFormWithFetch(formData);
+
+    });
+
+}
+</script>

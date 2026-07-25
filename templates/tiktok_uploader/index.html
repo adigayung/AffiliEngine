@@ -1,0 +1,212 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="row row-deck row-cards">
+
+    <div class="col-12">
+
+        <div class="card">
+
+            <div class="card-header">
+                <h3 class="card-title">
+                    TikTok Uploader Control
+                </h3>
+            </div>
+
+
+            <div class="card-body">
+
+
+                <div class="mb-3">
+
+                    <button 
+                        class="btn btn-success"
+                        onclick="setControl('on')">
+
+                        ON
+
+                    </button>
+
+
+                    <button 
+                        class="btn btn-danger"
+                        onclick="setControl('off')">
+
+                        OFF
+
+                    </button>
+
+
+                </div>
+
+
+
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <h3 class="card-title">
+                            Process Log
+                        </h3>
+
+                    </div>
+
+
+                    <div class="card-body p-0">
+
+
+                        <div id="terminal"
+
+                            style="
+                            background:#111;
+                            color:white;
+                            height:350px;
+                            padding:15px;
+                            overflow-y:auto;
+                            font-family:monospace;
+                            border-radius:8px;
+                            ">
+
+                            Loading...
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+<script>
+
+function setControl(status)
+{
+    fetch(
+        "/tiktok_uploader/control",
+        {
+            method:"POST",
+
+            headers:
+            {
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify(
+            {
+                status:status
+            })
+        }
+    )
+
+    .then(
+        r => r.json()
+    )
+
+    .then(
+        data =>
+        {
+            console.log(data);
+        }
+    );
+}
+
+
+function updateLog()
+{
+    fetch(
+        "/tiktok_uploader/status"
+    )
+
+    .then(
+        r => r.json()
+    )
+
+    .then(
+        data =>
+        {
+            let terminal =
+                document.getElementById(
+                    "terminal"
+                );
+
+
+            terminal.innerHTML = "";
+
+
+            data.log.forEach(
+                log =>
+                {
+                    let color = "#ccc";
+
+                    if(log.level === "success")
+                    {
+                        color = "#2ecc71";
+                    }
+
+                    else if(log.level === "warning")
+                    {
+                        color = "#f1c40f";
+                    }
+
+                    else if(log.level === "error")
+                    {
+                        color = "#e74c3c";
+                    }
+
+                    else if(log.level === "debug")
+                    {
+                        color = "#888";
+                    }
+
+
+                    terminal.innerHTML +=
+                    `
+                    <div style="color:${color}; margin-bottom:6px;">
+
+                        <span style="color:#777;">
+                            ${log.time}
+                        </span>
+
+                        ${log.icon}
+
+                        <span style="color:#3498db;">
+                            [${log.device || "-"}]
+                        </span>
+
+                        ${log.message}
+
+                    </div>
+                    `;
+                }
+            );
+
+
+            terminal.scrollTop =
+                terminal.scrollHeight;
+        }
+    );
+}
+
+
+setInterval(
+    updateLog,
+    1000
+);
+
+
+updateLog();
+
+</script>
+{% endblock %}

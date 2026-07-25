@@ -1,0 +1,302 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<!-- PAGE HEADER -->
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="ti ti-video me-2"></i>
+                Video Performance
+            </h2>
+                        <div class="text-muted mt-1">
+                Database histori performa video TikTok. Menampilkan seluruh video yang sudah dipublish di akun TikTok beserta metrik performanya.
+            </div>
+        </div>
+        <div class="col-auto d-flex gap-2">
+                        <a href="{{ url_for('creator_product_exposure.product_exposure', creator_id=creator.id) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-box me-2"></i>
+                Product Exposure
+            </a>
+            <a href="{{ url_for('creator_report.creator_report', creator_id=creator.id) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-calendar-stats me-2"></i>
+                Lihat Jadwal Upload
+            </a>
+            <a href="/" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-arrow-left me-2"></i>
+                Kembali
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- CREATOR INFO + SUMMARY KPI -->
+<div class="card card-lg mb-4">
+    <div class="card-body">
+        <div class="row align-items-center g-3">
+            <div class="col-auto">
+                {% if creator.profile_image %}
+                <span class="avatar avatar-xl" style="background-image: url({{ creator.profile_image }})"></span>
+                {% else %}
+                <span class="avatar avatar-xl bg-dark-lt">
+                    <i class="ti ti-user fs-1"></i>
+                </span>
+                {% endif %}
+            </div>
+            <div class="col-auto flex-grow-1" style="min-width: 0;">
+                <div class="fw-bold fs-4 lh-sm text-nowrap">{{ creator.display_name or creator.username }}</div>
+                <div class="text-muted small text-nowrap">@{{ creator.username }}</div>
+            </div>
+            <div class="col-auto flex-shrink-0">
+                <div class="row gx-4 gy-2 align-items-center justify-content-end">
+                    <div class="col-auto text-center px-3">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-clock text-muted"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Last Scan</span>
+                        </div>
+                        <div class="fw-bold fs-5">
+                            {% if summary.last_scan %}
+                            {{ summary.last_scan }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto text-center px-3 border-start">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-video text-muted"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Total Videos</span>
+                        </div>
+                        <div class="fw-bold fs-3">{{ summary.total_videos }}</div>
+                    </div>
+                                        <div class="col-auto text-center px-3 border-start">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-eye text-muted"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Total Views</span>
+                        </div>
+                        <div class="fw-bold fs-3">{{ "{:,}".format(summary.total_views) }}</div>
+                    </div>
+                    <div class="col-auto text-center px-3 border-start">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-heart text-muted"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Total Likes</span>
+                        </div>
+                        <div class="fw-bold fs-3">{{ "{:,}".format(summary.total_likes) }}</div>
+                    </div>
+                </div>
+            </div>
+    </div>
+    </div>
+    </div>
+<!-- SCAN BUTTON -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <button id="btnScan" class="btn btn-primary" onclick="startScan()">
+                    <i class="ti ti-scan me-2"></i>
+                    Scan / Update
+                </button>
+                <button id="btnStop" class="btn btn-danger d-none" onclick="stopScan()">
+                    <i class="ti ti-stop me-2"></i>
+                    Stop
+                </button>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div id="scanStatus" class="text-muted small">
+                    {% if summary.last_scan %}
+                    Terakhir scan: {{ summary.last_scan }}
+                    {% else %}
+                    Belum pernah scan.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div id="progressContainer" class="mt-3 d-none">
+            <div class="progress" style="height: 6px;">
+                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+            </div>
+        </div>
+        <div id="logContainer" class="mt-3 d-none">
+            <div class="card card-sm">
+                <div class="card-body" id="logContent" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if videos %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                                        <th width="40" class="text-center ps-3">#</th>
+                    <th width="150" class="text-nowrap">Upload Time</th>
+                    <th class="text-nowrap" style="min-width: 180px;">Caption</th>
+                    <th width="130" class="text-center text-nowrap">Views</th>
+                    <th width="120" class="text-center text-nowrap">Likes</th>
+                    <th width="100" class="text-center text-nowrap">Comments</th>
+                    <th width="100" class="text-center text-nowrap pe-3">Shares</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for video in videos %}
+                <tr>
+                    <td class="text-center ps-3"><span class="text-muted">{{ loop.index }}</span></td>
+                    <td class="text-nowrap small">{{ video.upload_time.strftime('%d %b %Y %H:%M') if video.upload_time is not string else video.upload_time[:16] }}</td>
+                    <td>
+                        {% if video.caption %}
+                        <span class="d-inline-block text-truncate" style="max-width: 280px;" title="{{ video.caption }}">
+                            {{ video.caption[:80] }}{% if video.caption|length > 80 %}...{% endif %}
+                        </span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="fw-medium">{{ "{:,}".format(video.views) }}</div>
+                        {% if video.views_growth is not none and video.views_growth > 0 %}
+                        <div class="text-green extra-small">+{{ "{:,}".format(video.views_growth) }}</div>
+                        {% elif video.views_growth is not none and video.views_growth < 0 %}
+                        <div class="text-red extra-small">{{ "{:,}".format(video.views_growth) }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="fw-medium">{{ "{:,}".format(video.likes) }}</div>
+                        {% if video.likes_growth is not none and video.likes_growth > 0 %}
+                        <div class="text-green extra-small">+{{ "{:,}".format(video.likes_growth) }}</div>
+                        {% elif video.likes_growth is not none and video.likes_growth < 0 %}
+                        <div class="text-red extra-small">{{ "{:,}".format(video.likes_growth) }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="fw-medium">{{ "{:,}".format(video.comments) }}</div>
+                        {% if video.comments_growth is not none and video.comments_growth > 0 %}
+                        <div class="text-green extra-small">+{{ "{:,}".format(video.comments_growth) }}</div>
+                        {% elif video.comments_growth is not none and video.comments_growth < 0 %}
+                        <div class="text-red extra-small">{{ "{:,}".format(video.comments_growth) }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center pe-3">
+                        <div class="fw-medium">{{ "{:,}".format(video.shares) }}</div>
+                        {% if video.shares_growth is not none and video.shares_growth > 0 %}
+                        <div class="text-green extra-small">+{{ "{:,}".format(video.shares_growth) }}</div>
+                        {% elif video.shares_growth is not none and video.shares_growth < 0 %}
+                        <div class="text-red extra-small">{{ "{:,}".format(video.shares_growth) }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-6">
+        <div class="mb-3"><i class="ti ti-video-off text-muted" style="font-size: 2.5rem;"></i></div>
+        <h4 class="text-muted">Belum ada data video.</h4>
+        <p class="text-secondary mb-4">Klik tombol <strong>Scan / Update</strong> untuk mengambil data video dari profil TikTok.</p>
+    </div>
+</div>
+{% endif %}
+
+
+<style>
+.extra-small { font-size: 0.65rem; line-height: 1.2; }
+.tracking-wider { letter-spacing: 0.05em; }
+</style>
+
+<script>
+var pollInterval = null;
+var captchaBadge = null;
+
+function startScan() {
+    var btn = document.getElementById("btnScan");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader ti-spin me-2"></i> Scanning...';
+    document.getElementById("btnStop").classList.remove("d-none");
+    document.getElementById("progressContainer").classList.remove("d-none");
+    document.getElementById("logContainer").classList.remove("d-none");
+    document.getElementById("logContent").innerHTML = "";
+        fetch("{{ url_for('video_performance.video_performance_scan', creator_id=creator.id) }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.success) { alert(data.message); resetScanButton(); return; }
+        // Polling cepat (500ms) agar responsif terhadap perubahan CAPTCHA
+        pollInterval = setInterval(function() { pollStatus(); }, 500);
+    }).catch(function(err) { console.error(err); alert("Gagal memulai scan."); resetScanButton(); });
+}
+
+function stopScan() {
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    removeCaptchaBadge();
+    fetch("{{ url_for('video_performance.video_performance_stop', creator_id=creator.id) }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+    }).then(function() { resetScanButton(); });
+}
+
+function showCaptchaBadge() {
+    removeCaptchaBadge();
+    captchaBadge = document.createElement("div");
+    captchaBadge.id = "captchaBadge";
+    captchaBadge.className = "alert alert-warning mt-2 mb-0 py-2";
+    captchaBadge.innerHTML = '<i class="ti ti-shield-lock me-2"></i> <strong>CAPTCHA terdeteksi.</strong> Silakan selesaikan verifikasi di browser TikTok yang terbuka. Proses scan akan melanjutkan secara otomatis setelah CAPTCHA selesai. Jika browser ditutup, scan akan dibatalkan.';
+    var container = document.getElementById("logContainer");
+    if (container && container.parentNode) {
+        container.parentNode.insertBefore(captchaBadge, container.nextSibling);
+    }
+}
+
+function removeCaptchaBadge() {
+    if (captchaBadge) {
+        captchaBadge.remove();
+        captchaBadge = null;
+    }
+}
+
+function pollStatus() {
+    fetch("{{ url_for('video_performance.video_performance_status', creator_id=creator.id) }}")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById("progressBar").style.width = data.progress + "%";
+        if (data.logs) {
+            document.getElementById("logContent").innerHTML = data.logs.join("");
+            document.getElementById("logContent").scrollTop = document.getElementById("logContent").scrollHeight;
+        }
+        // Handle CAPTCHA state - stay in waiting_captcha until resolved
+        if (data.state === "waiting_captcha") {
+            showCaptchaBadge();
+            document.getElementById("btnScan").disabled = true;
+            document.getElementById("btnScan").innerHTML = '<i class="ti ti-shield-lock ti-spin me-2"></i> Menunggu CAPTCHA...';
+        } else {
+            removeCaptchaBadge();
+        }
+        // Handle failed state
+        if (data.state === "failed" && !data.running) {
+            clearInterval(pollInterval); pollInterval = null;
+            removeCaptchaBadge();
+            resetScanButton();
+            // Jangan reload otomatis - user perlu membaca error
+            return;
+        }
+        if (!data.running) {
+            clearInterval(pollInterval); pollInterval = null;
+            resetScanButton();
+            removeCaptchaBadge();
+            if (data.progress >= 100) { setTimeout(function() { location.reload(); }, 1500); }
+        }
+    });
+}
+
+function resetScanButton() {
+    document.getElementById("btnScan").disabled = false;
+    document.getElementById("btnScan").innerHTML = '<i class="ti ti-scan me-2"></i> Scan / Update';
+    document.getElementById("btnStop").classList.add("d-none");
+}
+</script>
+
+{% endblock %}

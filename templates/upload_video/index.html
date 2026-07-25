@@ -1,0 +1,929 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Video Upload Runner{% endblock %}
+
+{% block content %}
+
+<style>
+
+#logConsole{
+
+    height:420px;
+
+    overflow-y:auto;
+
+    background:#0d1117;
+
+    font-family:Consolas, "Courier New", monospace;
+
+    font-size:20px;
+    
+    color:#f0f6fc;
+
+    border-radius:0 0 .5rem .5rem;
+
+}
+
+.log-header{
+
+    position:sticky;
+
+    top:0;
+
+    display:flex;
+
+    align-items:center;
+
+    padding:10px 14px;
+
+    background:#161b22;
+
+    border-bottom:1px solid #30363d;
+
+    font-weight:600;
+
+    color:#8b949e;
+
+    z-index:10;
+
+}
+
+.log-header .time{
+
+    width:90px;
+
+}
+
+.log-header .type{
+
+    width:100px;
+
+}
+
+.log-header .message{
+
+    flex:1;
+
+}
+
+.log-row{
+
+    display:flex;
+
+    align-items:flex-start;
+
+    padding:6px 14px;
+
+    border-bottom:1px solid rgba(255,255,255,.05);
+
+    line-height:1.45;
+
+}
+
+.log-row:hover{
+
+    background:#161b22;
+
+}
+
+.log-time{
+
+    width:90px;
+
+    color:#8b949e;
+
+    flex-shrink:0;
+
+}
+
+.log-level{
+
+    width:100px;
+
+    flex-shrink:0;
+
+}
+
+.log-message{
+
+    flex:1;
+
+    color:#f0f6fc;
+
+    word-break:break-word;
+
+}
+
+.badge-log{
+
+    display:inline-block;
+
+    width:80px;
+
+    text-align:center;
+
+    padding:3px 8px;
+
+    border-radius:5px;
+
+    font-size:11px;
+
+    font-weight:700;
+
+}
+
+.badge-info{
+
+    background:#1f6feb;
+
+    color:#fff;
+
+}
+
+.badge-success{
+
+    background:#238636;
+
+    color:#fff;
+
+}
+
+.badge-warning{
+
+    background:#9e6a03;
+
+    color:#fff;
+
+}
+
+.badge-danger{
+
+    background:#da3633;
+
+    color:#fff;
+
+}
+
+.badge-command{
+
+    background:#8250df;
+
+    color:#fff;
+
+}
+
+.badge-send{
+
+    background:#0969da;
+
+    color:#fff;
+
+}
+
+.badge-receive{
+
+    background:#2da44e;
+
+    color:#fff;
+
+}
+
+.badge-system{
+
+    background:#57606a;
+
+    color:#fff;
+
+}
+
+.log-divider{
+
+    height:1px;
+
+    background:#30363d;
+
+    margin:6px 0;
+
+}
+
+</style>
+
+<div class="page-wrapper">
+
+    <!-- Page Header -->
+    <div class="page-header d-print-none">
+
+        <div class="container-xl">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <h2 class="page-title">
+
+                    <i class="ti ti-device-tv me-2"></i>
+
+                    Video Upload Runner
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Page Body -->
+    <div class="page-body">
+
+        <div class="container-xl">
+
+                        <!-- Upload Configuration -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h3 class="card-title">
+
+                        Upload Configuration
+
+                    </h3>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+
+                            Workflow JSON
+
+                        </label>
+
+                        <input
+                            id="jsonFile"
+                            type="file"
+                            class="form-control"
+                            accept=".json">
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+
+                            <label class="form-label mb-0">
+
+                                Video Path List
+
+                            </label>
+
+                                <a
+                                    id="galleryLink"
+                                    href="javascript:void(0)"
+                                    class="text-decoration-none"
+                                    style="display:none; font-size:14px;">
+
+                                    <i class="ti ti-photo me-1"></i>
+
+                                    Preview Gallery
+
+                                </a>
+
+                        </div>
+
+                        <textarea
+                            id="pathList"
+                            class="form-control"
+                            rows="10"
+                            placeholder="Tempel daftar folder upload di sini..."></textarea>
+
+                            <form
+                                id="galleryForm"
+                                action="/upload_video/product_lists"
+                                method="post"
+                                target="_blank"
+                                style="display:none;">
+
+                                <input
+                                    type="hidden"
+                                    name="path_list"
+                                    id="galleryPathList">
+
+                            </form>
+                    </div>
+
+                    <div class="mt-4">
+
+                        <button
+                            id="btnRunner"
+                            class="btn btn-success"
+                            disabled>
+
+                            <i class="ti ti-player-play-filled me-1"></i>
+
+                            START
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+                                    <!-- Upload Information Panel -->
+            <div class="row g-3 mb-4" id="infoPanel">
+                                <!-- Card Kiri: Creator Information -->
+                <div class="col-md-6 d-flex">
+                    <div class="card w-100">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="ti ti-user me-2"></i>
+                                Creator Information
+                            </h3>
+                        </div>
+                        <div class="card-body d-flex align-items-center">
+                            {% set info = manager_status.get('info', {}) %}
+                            {% set creator_info = info.get('creator') or (batch_data.get('creator') if batch_data else None) %}
+                            {% set total_jobs = info.get('total_jobs') or (batch_data.get('schedule', {}).get('total_jobs') if batch_data else 0) %}
+                            {% set success_count = info.get('success_count', 0) %}
+                            {% set progress_persen = info.get('progress_persen', 0) %}
+                            {% set upload_range_text = info.get('upload_range_text', '') %}
+                            {% if not upload_range_text and batch_data %}
+                                {% set sched = batch_data.get('schedule', {}) %}
+                                {% if sched.get('start_datetime') and sched.get('finish_datetime') %}
+                                    {# Akan dihitung via JS karena Jinja tidak punya timedelta #}
+                                {% endif %}
+                            {% endif %}
+                            {% set username = creator_info.get('username', '—') if creator_info else '—' %}
+                            {% set avatar_url = creator_info.get('avatar', '') if creator_info else '' %}
+                            <div class="d-flex gap-3 w-100">
+                                <!-- Avatar Creator -->
+                                <div class="flex-shrink-0 position-relative" style="width:72px;height:72px;">
+                                    {% if avatar_url %}
+                                    <img id="infoAvatar"
+                                         src="{{ avatar_url }}"
+                                         alt="Avatar"
+                                         class="rounded"
+                                         style="width:72px;height:72px;object-fit:cover;object-position:center;border-radius:0.5rem;"
+                                         onerror="this.style.display='none';document.getElementById('infoAvatarFallback').style.display='flex'">
+                                    {% endif %}
+                                    <div id="infoAvatarFallback"
+                                         class="avatar avatar-xl rounded"
+                                         style="width:72px;height:72px;display:{% if avatar_url %}none{% else %}flex{% endif %};align-items:center;justify-content:center;background:#e9ecef;border-radius:0.5rem;">
+                                        <i class="ti ti-user fs-2 text-muted"></i>
+                                    </div>
+                                </div>
+                                <!-- Info Creator -->
+                                <div class="flex-fill min-w-0">
+                                    <h4 class="mb-0 fw-semibold" id="infoUsername">{{ username }}</h4>
+                                    <div class="text-secondary small mb-2" id="infoAtUsername">@{{ username }}</div>
+
+                                    <div class="mb-1">
+                                        <div class="d-flex justify-content-between text-secondary small">
+                                            <span>Total Video</span>
+                                            <span class="fw-semibold" id="infoTotalJobs">{{ total_jobs }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="d-flex justify-content-between text-secondary small mb-1">
+                                            <span>Upload Progress</span>
+                                            <span class="fw-semibold" id="infoProgressText">{{ success_count }} / {{ total_jobs }}</span>
+                                        </div>
+                                        <div class="progress progress-sm" style="height:6px;">
+                                            <div class="progress-bar bg-success" id="infoProgressBar"
+                                                 style="width:{{ progress_persen }}%"
+                                                 role="progressbar"
+                                                 aria-valuenow="{{ progress_persen }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-2">
+                                        <div class="text-secondary small">Upload Range</div>
+                                        <div class="small" id="infoUploadRange">
+                                            <i class="ti ti-calendar-stats me-1 text-secondary"></i>
+                                            {% if upload_range_text %}
+                                                {{ upload_range_text }}
+                                            {% elif batch_data and batch_data.get('schedule', {}).get('start_datetime') and batch_data.get('schedule', {}).get('finish_datetime') %}
+                                                <span class="text-secondary">Memuat...</span>
+                                            {% else %}
+                                                <span class="text-secondary">—</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                                                                <!-- Card Kanan: Current Upload -->
+                                <div class="col-md-6 d-flex">
+                                    <div class="card w-100">
+                                        <div class="card-header">
+                                            <h3 class="card-title">
+                                                <i class="ti ti-player-track-next me-2"></i>
+                                                Current Upload
+                                            </h3>
+                                        </div>
+                                        <div class="card-body d-flex align-items-center">
+                                            <!-- Empty State -->
+                                            <div id="currentJobEmpty" class="text-center w-100 text-secondary">
+                                                <i class="ti ti-inbox-off fs-2 mb-2 d-block"></i>
+                                                <span>Belum ada job yang diproses</span>
+                                            </div>
+                                            <!-- Job Content -->
+                                            <div id="currentJobContainer" class="d-flex gap-3 w-100" style="display: none !important;">
+                                                <!-- Thumbnail Produk -->
+                                                <div class="flex-shrink-0 position-relative align-self-start mt-1" style="width:100px;height:100px;">
+                                                    <img id="currentJobImage"
+                                                         src=""
+                                                         alt="Product Image"
+                                                         class="rounded"
+                                                         style="width:100px;height:100px;object-fit:cover;object-position:center;border-radius:0.5rem;"
+                                                         onerror="this.style.display='none';document.getElementById('currentJobImageFallback').style.display='flex'">
+                                                    <div id="currentJobImageFallback"
+                                                         class="rounded"
+                                                         style="width:100px;height:100px;display:none;align-items:center;justify-content:center;background:#e9ecef;border-radius:0.5rem;">
+                                                        <i class="ti ti-photo fs-2 text-muted"></i>
+                                                    </div>
+                                                </div>
+                                                <!-- Info Produk -->
+                                                <div class="flex-fill min-w-0">
+                                                    <h5 class="mb-0 fw-bold" id="currentJobTitle"
+                                                        style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;font-size:0.95rem;line-height:1.4;">
+                                                        —
+                                                    </h5>
+                                                    <div class="mt-2 d-flex align-items-center gap-1 text-secondary small" id="currentJobSchedule">
+                                                        <i class="ti ti-calendar me-1"></i>
+                                                        <span>Terjadwal: —</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+            </div>
+
+            <!-- Upload Console -->
+            <div class="card mt-2">
+
+                <div class="card-header">
+
+                    <div class="d-flex justify-content-between align-items-center w-100">
+
+                        <h3 class="card-title mb-0">
+
+                            <i class="ti ti-terminal-2 me-2"></i>
+
+                            Upload Console
+
+                        </h3>
+
+                        <span
+                            id="logStatus"
+                            class="badge bg-green-lt">
+
+                            READY
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div id="logConsole">
+
+                    <div class="log-header">
+
+                        <div class="time">
+
+                            TIME
+
+                        </div>
+
+                        <div class="type">
+
+                            TYPE
+
+                        </div>
+
+                        <div class="message">
+
+                            MESSAGE
+
+                        </div>
+
+                    </div>
+
+                    <!-- JavaScript append log di sini -->
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+const jsonFile = document.getElementById("jsonFile");
+const pathList = document.getElementById("pathList");
+const btnRunner = document.getElementById("btnRunner");
+
+let isRunning = false;
+
+
+/* ==========================================================
+   Enable / Disable START
+========================================================== */
+const galleryLink = document.getElementById("galleryLink");
+function updateStartButton() {
+
+    if (isRunning) {
+        return;
+    }
+
+    const hasText = pathList.value.trim().length > 0;
+
+    btnRunner.disabled = !hasText;
+
+    galleryLink.style.display = hasText ? "inline-block" : "none";
+
+}
+
+/* ==========================================================
+   Runner Button
+========================================================== */
+
+function setRunnerButton(running) {
+
+    isRunning = running;
+
+    if (running) {
+
+        btnRunner.disabled = false;
+
+        btnRunner.classList.remove("btn-success");
+        btnRunner.classList.add("btn-danger");
+
+        btnRunner.innerHTML = `
+            <i class="ti ti-player-stop-filled me-1"></i>
+            STOP
+        `;
+
+    }
+    else {
+
+        btnRunner.classList.remove("btn-danger");
+        btnRunner.classList.add("btn-success");
+
+        btnRunner.innerHTML = `
+            <i class="ti ti-player-play-filled me-1"></i>
+            START
+        `;
+
+        updateStartButton();
+
+    }
+
+}
+
+
+/* ==========================================================
+   JSON Loader
+========================================================== */
+
+jsonFile.addEventListener("change", async function () {
+
+    const file = this.files[0];
+
+    if (!file) {
+
+        pathList.value = "";
+
+        updateStartButton();
+
+        return;
+
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+
+        const response = await fetch("/upload_video/get_paths", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+
+            throw new Error("Request gagal.");
+
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+
+            alert(result.message || "Gagal membaca workflow.");
+
+            pathList.value = "";
+
+            updateStartButton();
+
+            return;
+
+        }
+
+        pathList.value = result.paths.join("\n");
+
+        updateStartButton();
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+        alert("Gagal membaca file JSON.");
+
+        pathList.value = "";
+
+        updateStartButton();
+
+    }
+
+});
+
+/* ==========================================================
+   Manual Edit Path
+========================================================== */
+
+pathList.addEventListener("input", updateStartButton);
+
+
+/* ==========================================================
+   START / STOP
+========================================================== */
+
+btnRunner.addEventListener("click", async function () {
+
+    if (isRunning) {
+
+        const ok = confirm(
+            "Yakin ingin menghentikan upload?\n\nJob yang sedang berjalan akan diselesaikan terlebih dahulu."
+        );
+
+        if (!ok) {
+            return;
+        }
+
+        await fetch("/upload_video/stop", {
+            method: "POST"
+        });
+
+        return;
+
+    }
+
+    const text = pathList.value.trim();
+
+    if (text.length === 0) {
+
+        alert("Video Path List masih kosong.");
+
+        return;
+
+    }
+
+    const form = new FormData();
+
+    form.append("path_list", text);
+
+    try {
+
+        const response = await fetch("/upload_video/start", {
+
+            method: "POST",
+
+            body: form
+
+        });
+
+        const result = await response.json();
+
+        console.log(result);
+
+        if (result.success) {
+
+            setRunnerButton(true);
+
+        }
+        else {
+
+            alert(result.message || "Gagal memulai upload.");
+
+        }
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+        alert("Tidak dapat terhubung ke server.");
+
+    }
+
+});
+
+
+/* ==========================================================
+   Status Polling
+========================================================== */
+
+async function updateStatus() {
+
+    try {
+
+        const res = await fetch("/upload_video/status");
+
+        const data = await res.json();
+
+        setRunnerButton(data.running);
+
+        document.getElementById("logStatus").textContent =
+            data.running ? "RUNNING" : "READY";
+
+        const consoleDiv = document.getElementById("logConsole");
+
+        const header = consoleDiv.querySelector(".log-header");
+
+        consoleDiv.innerHTML = "";
+
+        consoleDiv.appendChild(header);
+
+        if (Array.isArray(data.logs)) {
+
+            data.logs.forEach(log => {
+
+                consoleDiv.insertAdjacentHTML("beforeend", log);
+
+            });
+
+        }
+
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+
+        // Update Information Panel
+        updateInfoPanel(data);
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+    }
+
+}
+
+/* ==========================================================
+   Update Information Panel
+========================================================== */
+
+function updateInfoPanel(data) {
+
+    const info = data.info;
+
+    if (!info) return;
+
+        // Creator Information
+    const creator = info.creator;
+    if (creator) {
+        document.getElementById("infoUsername").textContent = creator.username || '—';
+        document.getElementById("infoAtUsername").textContent = '@' + (creator.username || '—');
+        const avatarFallback = document.getElementById("infoAvatarFallback");
+        let avatarImg = document.getElementById("infoAvatar");
+        if (creator.avatar) {
+            // Jika belum ada elemen <img>, buat baru
+            if (!avatarImg) {
+                const container = avatarFallback.parentNode;
+                avatarImg = document.createElement('img');
+                avatarImg.id = 'infoAvatar';
+                avatarImg.alt = 'Avatar';
+                avatarImg.className = 'rounded';
+                avatarImg.style.cssText = 'width:72px;height:72px;object-fit:cover;object-position:center;border-radius:0.5rem;';
+                avatarImg.onerror = function() {
+                    this.style.display = 'none';
+                    document.getElementById('infoAvatarFallback').style.display = 'flex';
+                };
+                container.insertBefore(avatarImg, avatarFallback);
+            }
+            avatarImg.src = creator.avatar;
+            avatarImg.style.display = '';
+            avatarFallback.style.display = 'none';
+        } else {
+            if (avatarImg) avatarImg.style.display = 'none';
+            avatarFallback.style.display = 'flex';
+        }
+    }
+
+    // Total Jobs & Progress
+    const totalJobs = info.total_jobs || 0;
+    const successCount = info.success_count || 0;
+    const progressPersen = info.progress_persen || 0;
+
+    document.getElementById("infoTotalJobs").textContent = totalJobs;
+
+    const progressTextEl = document.getElementById("infoProgressText");
+    if (progressTextEl) {
+        progressTextEl.textContent = successCount + ' / ' + (totalJobs || '?');
+    }
+
+    const progressBar = document.getElementById("infoProgressBar");
+    if (progressBar) {
+        progressBar.style.width = progressPersen + '%';
+        progressBar.setAttribute('aria-valuenow', progressPersen);
+        progressBar.textContent = progressPersen + '%';
+    }
+
+    // Upload Range
+    if (info.upload_range_text) {
+        const rangeEl = document.getElementById("infoUploadRange");
+        if (rangeEl) {
+            rangeEl.innerHTML = '<i class="ti ti-calendar-stats me-1 text-muted"></i> ' + info.upload_range_text;
+        }
+    }
+
+        // Current Upload (Preview Produk)
+        const currentJob = info.current_job;
+        const emptyEl = document.getElementById("currentJobEmpty");
+        const container = document.getElementById("currentJobContainer");
+
+        if (currentJob && currentJob.product_title) {
+            // Sembunyikan empty state, tampilkan container
+            if (emptyEl) emptyEl.style.display = 'none';
+            if (container) container.style.cssText = 'display: flex !important';
+
+            // Set image dengan fallback
+            const imgEl = document.getElementById("currentJobImage");
+            const imgFallback = document.getElementById("currentJobImageFallback");
+            if (imgEl && currentJob.product_image) {
+                imgEl.src = currentJob.product_image;
+                imgEl.style.display = '';
+                if (imgFallback) imgFallback.style.display = 'none';
+            } else {
+                if (imgEl) imgEl.style.display = 'none';
+                if (imgFallback) imgFallback.style.display = 'flex';
+            }
+
+            // Set title dengan line-clamp
+            const titleEl = document.getElementById("currentJobTitle");
+            if (titleEl) {
+                titleEl.textContent = currentJob.product_title || '—';
+            }
+
+            // Set schedule
+            const schedEl = document.getElementById("currentJobSchedule");
+            if (schedEl) {
+                if (currentJob.schedule_display) {
+                    schedEl.innerHTML = '<i class="ti ti-calendar me-1"></i><span>Terjadwal: ' + currentJob.schedule_display + '</span>';
+                } else {
+                    schedEl.innerHTML = '<i class="ti ti-calendar me-1"></i><span>Terjadwal: —</span>';
+                }
+            }
+        } else {
+            // Tidak ada job aktif
+            if (emptyEl) emptyEl.style.display = '';
+            if (container) container.style.cssText = 'display: none !important';
+        }
+}
+
+galleryLink.addEventListener("click", function (e) {
+
+    e.preventDefault();
+
+    document.getElementById("galleryPathList").value =
+        pathList.value;
+
+    document.getElementById("galleryForm").submit();
+
+});
+
+
+/* ==========================================================
+   Init
+========================================================== */
+
+updateStartButton();
+
+updateStatus();
+
+setInterval(updateStatus, 1000);
+</script>
+{% endblock %}

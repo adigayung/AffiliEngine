@@ -1,0 +1,634 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<style>
+
+input[type="text"]::-webkit-inner-spin-button,
+input[type="text"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+</style>
+<div class="card">
+
+    <div class="card-header">
+
+        <h3 class="card-title">
+            Prepare Upload
+        </h3>
+
+    </div>
+
+    <div class="list-group list-group-flush">
+
+        {% for product in products %}
+
+        <div class="list-group-item">
+
+            <div class="row align-items-center">
+
+                <div class="col-auto">
+
+                    <span
+                        class="avatar avatar-xl"
+                        style="
+                            width:80px;
+                            height:80px;
+                            background-image:url('{{ url_for('static', filename='products/' ~ product['tiktok_id_product'] ~ '/product/1.jpg') }}');
+                            background-size:cover;
+                            background-position:center;
+                            background-repeat:no-repeat;
+                        ">
+                    </span>
+
+                </div>
+
+                <div class="col">
+
+                    <div class="fw-bold">
+
+                        {{ product["title"][:60] }}{% if product["title"]|length > 60 %}...{% endif %}
+
+                    </div>
+
+                    <div class="mt-2">
+
+                        <span class="badge bg-blue-lt">
+
+                            Score :
+                            {{ product["product_analysis"]["analysis_json"]["opportunity_score"] }}
+
+                        </span>
+
+                        <span class="badge bg-green-lt">
+
+                            Komisi :
+                            Rp {{ "{:,}".format(product["komisi"]) }}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div class="col-auto">
+
+                    <div class="input-group">
+
+                        <button
+                            class="btn btn-outline-secondary"
+                            onclick="changeQty('{{ product['tiktok_id_product'] }}', -1)">
+
+                            <i class="ti ti-minus"></i>
+
+                        </button>
+
+                        <input
+                            id="qty_{{ product['tiktok_id_product'] }}"
+                            class="form-control text-center"
+                            style="width:60px"
+                            type="text"
+                            inputmode="numeric"
+                            value="1"
+                            oninput="validateQty(this)">
+
+                        <button
+                            class="btn btn-outline-secondary"
+                            onclick="changeQty('{{ product['tiktok_id_product'] }}', 1)">
+
+                            <i class="ti ti-plus"></i>
+
+                        </button>
+
+                    </div>
+
+                    <div class="text-center small text-secondary mt-1">
+
+                        Video
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% else %}
+
+        <div class="list-group-item text-center text-muted py-5">
+
+            No product selected.
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+
+        <div>
+
+            <strong>Total Product :</strong>
+
+            {{ products|length }}
+
+            <br>
+
+            <strong>Total Video :</strong>
+
+            <span id="totalVideo">0</span>
+
+        </div>
+
+        <div class="d-flex gap-2">
+
+            <button
+                class="btn btn-outline-primary"
+                onclick="calculateWeightAI()">
+
+                <i class="ti ti-brain me-2"></i>
+
+                AI Calculate Weight
+
+            </button>
+
+            <button
+                class="btn btn-primary"
+                onclick="generateUploadSchedule()">
+
+                <i class="ti ti-calendar me-2"></i>
+
+                Generate Upload Schedule
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div
+    id="aiWeightPanel"
+    class="card mt-3"
+    style="display:none;">
+
+    <div class="card-header">
+
+        <h3 class="card-title">
+
+            <i class="ti ti-brain me-2"></i>
+
+            AI Product Analysis
+
+        </h3>
+
+    </div>
+
+    <div class="card-body">
+
+        <div id="aiLoading">
+
+            <div class="text-center py-5">
+
+                <div
+                    class="spinner-border text-primary mb-3"
+                    style="width:3rem;height:3rem">
+
+                </div>
+
+                <h3>
+
+                    AI is analyzing your products...
+
+                </h3>
+
+                <div
+                    id="loadingStatus"
+                    class="text-secondary">
+
+                    Reading product information...
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div
+            id="aiResult"
+            style="display:none;">
+
+            <div class="row mb-4">
+
+                <div class="col-md-3">
+
+                    <label class="form-label">
+
+                        Total Video
+
+                    </label>
+
+                    <input
+                        id="totalVideos"
+                        type="number"
+                        class="form-control"
+                        min="1"
+                        value="10">
+
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+
+                    <button
+                        id="applyWeightBtn"
+                        onclick="applyWeight()"
+                        class="btn btn-primary w-100">
+
+                        <i class="ti ti-check me-2"></i>
+
+                        Apply Weight
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div
+                id="aiRanking"
+                class="d-flex flex-column gap-3">
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+const loadingText = [
+
+    "Reading product information...",
+
+    "Analyzing Opportunity Score...",
+
+    "Comparing CTR...",
+
+    "Evaluating competition...",
+
+    "Calculating product weight...",
+
+    "Preparing recommendation..."
+
+];
+
+let aiResult = {};
+let loadingIndex = 0;
+let loadingTimer = null;
+
+function applyWeight(){
+
+    if(!aiResult){
+
+        alert("Please run AI Calculate Weight first.");
+
+        return;
+
+    }
+    
+    const totalVideo = parseInt(
+        document.getElementById("totalVideos").value
+    );
+
+    if(isNaN(totalVideo) || totalVideo < 1){
+
+        alert("Invalid Total Video.");
+
+        return;
+
+    }
+
+    const formData = new FormData();
+    formData.append(
+        "total_video",
+        totalVideo
+    );
+
+    formData.append(
+        "ai_result",
+        JSON.stringify(aiResult)
+    );
+
+    fetch("/product_list/prepare_upload/apply_weight",{
+
+        method:"POST",
+
+        body:formData
+
+    })
+
+    .then(response=>response.json())
+
+    .then(data=>{
+
+        Object.entries(data).forEach(function([productId,qty]){
+
+            const input = document.getElementById(
+                "qty_" + productId
+            );
+
+            if(input){
+
+                input.value = qty;
+
+            }
+
+        });
+
+        updateTotalVideo();
+
+    })
+
+    .catch(function(error){
+
+        console.error(error);
+
+        alert("Apply Weight Failed.");
+
+    });
+
+}
+
+function calculateWeightAI(){
+
+    document.getElementById("aiWeightPanel").style.display = "";
+
+    document.getElementById("aiLoading").style.display = "";
+
+    document.getElementById("aiResult").style.display = "none";
+
+    loadingIndex = 0;
+
+    document.getElementById("loadingStatus").textContent =
+        loadingText[0];
+
+    loadingTimer = setInterval(function(){
+
+        loadingIndex++;
+
+        if(loadingIndex >= loadingText.length){
+
+            loadingIndex = loadingText.length - 1;
+
+        }
+
+        document.getElementById("loadingStatus").textContent =
+            loadingText[loadingIndex];
+
+    },1000);
+
+    const productList = [];
+
+    document.querySelectorAll("input[id^='qty_']").forEach(function(input){
+
+        productList.push(
+            input.id.replace("qty_","")
+        );
+
+    });
+
+    const formData = new FormData();
+
+    formData.append(
+        "products",
+        JSON.stringify(productList)
+    );
+
+    fetch("/product_list/prepare_upload/compare_products",{
+
+        method:"POST",
+
+        body:formData
+
+    })
+
+    .then(response=>response.json())
+
+    .then(data=>{
+
+        clearInterval(loadingTimer);
+
+        aiResult = data;
+
+        document.getElementById("aiLoading").style.display="none";
+
+        document.getElementById("aiResult").style.display="";
+
+        renderAIRanking(data);
+
+    })
+
+    .catch(error=>{
+
+        clearInterval(loadingTimer);
+
+        console.error(error);
+
+        alert("AI Analysis Failed.");
+
+    });
+
+}
+
+
+function renderAIRanking(data){
+
+    const container = document.getElementById("aiRanking");
+
+    container.innerHTML = "";
+
+    const medals = ["🥇","🥈","🥉"];
+
+    Object.values(data)
+    .sort((a,b)=>b.weight-a.weight)
+    .forEach(function(item,index){
+
+        const medal = medals[index] || "🏅";
+
+        const percent = Math.min(item.weight/10,100);
+
+        container.innerHTML += `
+
+        <div class="card">
+
+            <div class="card-body">
+
+                <div class="row align-items-center">
+
+                    <div class="col-auto">
+
+                        <div class="fs-1">
+
+                            ${medal}
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-auto">
+
+                        <img
+                            src="${item.image}"
+                            class="rounded"
+                            style="width:80px;height:80px;object-fit:cover;"
+                        >
+
+                    </div>
+
+                    <div class="col">
+
+                        <div class="fw-bold mb-1">
+
+                            ${item.title}
+
+                        </div>
+
+                        <div class="progress mb-2">
+
+                            <div
+                                class="progress-bar"
+                                role="progressbar"
+                                style="width:${percent}%">
+
+                            </div>
+
+                        </div>
+
+                        <div class="small">
+
+                            <strong>Weight :</strong>
+                            ${item.weight}
+
+                        </div>
+
+                        <div class="small text-secondary mt-2">
+
+                            ${item.reason}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        `;
+
+    });
+
+}
+
+function updateTotalVideo(){
+
+    let total = 0;
+
+    document.querySelectorAll("input[id^='qty_']").forEach(function(input){
+
+        total += parseInt(input.value) || 0;
+
+    });
+
+    document.getElementById("totalVideo").textContent = total;
+
+}
+
+function changeQty(productId,diff){
+
+    const input = document.getElementById(
+        "qty_" + productId
+    );
+
+    let value = parseInt(input.value) || 1;
+
+    value += diff;
+
+    if(value < 1){
+
+        value = 1;
+
+    }
+
+    input.value = value;
+
+    updateTotalVideo();
+
+}
+
+function validateQty(input){
+
+    let value = parseInt(input.value);
+
+    if(isNaN(value) || value < 1){
+
+        input.value = 1;
+
+    }
+
+    updateTotalVideo();
+
+}
+
+function generateUploadSchedule(){
+
+    const products = {};
+
+    document.querySelectorAll("input[id^='qty_']").forEach(function(input){
+
+        const productId = input.id.replace("qty_", "");
+
+        products[productId] = parseInt(input.value) || 1;
+
+    });
+
+    const form = document.createElement("form");
+
+    form.method = "POST";
+    form.action = "/product_list/prepare_upload/jadwal";
+
+    // products
+    let input = document.createElement("input");
+
+    input.type = "hidden";
+    input.name = "products";
+    input.value = JSON.stringify(products);
+
+    form.appendChild(input);
+
+    // contoh data lain
+    input = document.createElement("input");
+
+    input.type = "hidden";
+    input.name = "creator_id";
+
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+
+    form.submit();
+
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+
+    updateTotalVideo();
+
+});
+</script>
+{% endblock %}

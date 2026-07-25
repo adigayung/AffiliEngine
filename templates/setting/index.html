@@ -1,0 +1,58 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="card">
+
+    <!-- TAB NAV -->
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+
+            <li class="nav-item">
+                <a href="#tab-app" class="nav-link active" data-bs-toggle="tab">
+                    App
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="#tab-mysql" class="nav-link" data-bs-toggle="tab">
+                    MySQL
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="#tab-ai" class="nav-link" data-bs-toggle="tab">
+                    AI
+                </a>
+            </li>
+
+        </ul>
+    </div>
+
+    <!-- TAB CONTENT -->
+    <div class="card-body">
+
+        <div class="tab-content">
+
+            <!-- INCLUDE APP -->
+            <div class="tab-pane active show" id="tab-app">
+                {% include "setting/app.html" %}
+            </div>
+
+            <!-- INCLUDE MYSQL -->
+            <div class="tab-pane" id="tab-mysql">
+                {% include "setting/mysql.html" %}
+            </div>
+
+            <!-- INCLUDE AI -->
+            <div class="tab-pane" id="tab-ai">
+                {% include "setting/ai.html" %}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

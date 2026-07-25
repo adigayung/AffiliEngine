@@ -1,0 +1,227 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Product Gallery{% endblock %}
+
+{% block content %}
+
+{% macro truncate_title(title, max_chars=50) %}
+    {%- if title %}
+        {%- if title|length > max_chars %}
+            {{- title[:max_chars] ~ '...' -}}
+        {%- else %}
+            {{- title -}}
+        {%- endif %}
+    {%- endif %}
+{%- endmacro %}
+
+<style>
+/* ===== Grid ===== */
+.row {
+    margin: 0 -6px;
+}
+.row > .col {
+    padding: 6px;
+}
+
+/* ===== Card ===== */
+.card-hover {
+    display: flex;
+    flex-direction: column;
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+    transition: transform .28s ease, box-shadow .28s ease;
+}
+.card-hover:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, .13);
+}
+
+/* ===== Header (nomor urut) ===== */
+.card-header-index {
+
+    height:40px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    text-align:center;
+
+    padding:0 !important;
+
+    margin:0;
+
+    background:#1a1a2e;
+
+    color:#00f2ff;
+
+    font-size:16px;
+
+    font-weight:700;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+    user-select:none;
+
+    letter-spacing:.5px;
+}
+
+.card-header-index span{
+    width:100%;
+    text-align:center;
+}
+
+/* ===== Image ===== */
+.card-img-wrapper {
+    flex: 1 1 auto;
+    overflow: hidden;
+    background: #f5f5f5;
+    line-height: 0;
+    min-height: 220px;
+    display: flex;
+}
+.card-img-wrapper a {
+    display: flex;
+    width: 100%;
+}
+.card-img-top {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+}
+
+/* ===== Placeholder ===== */
+.placeholder-img {
+    width: 100%;
+    height: 220px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* ===== Body ===== */
+.card-body {
+    flex: 0 0 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+}
+
+/* ===== Title ===== */
+.card-title {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    line-height: 1.45;
+    text-align: center;
+    text-decoration: none;
+    transition: color .15s ease;
+    display: block;
+    max-height: 52px;
+}
+.card-title:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+.card-title.text-truncate-link {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
+
+<div class="container-xl">
+    <div class="page-header d-print-none mb-4">
+        <div class="row align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Product Gallery
+                </h2>
+                <div class="text-muted mt-1">
+                    {{ data|length }} Postingan Produk ditemukan
+                </div>
+            </div>
+            <div class="col-auto ms-auto">
+                <a href="{{ url_for('upload_video.index') }}" class="btn btn-outline-secondary">
+                    <i class="ti ti-arrow-left me-2"></i>
+                    Back to Upload Runner
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if data %}
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+        {% for item in data %}
+        <div class="col d-flex">
+            <div class="card card-hover flex-fill">
+                <div class="card-header-index"><span>{{ item.index }}</span></div>
+                <div class="card-img-wrapper">
+                    {% if item.exists and item.product_id %}
+                    <a href="/product/{{ item.product_id }}" target="_blank">
+                        <img
+                            class="card-img-top"
+                            src="{{ url_for('upload_video.product_image', path=item.image) }}"
+                            alt="Product Image"
+                            loading="lazy">
+                    </a>
+                    {% elif item.exists %}
+                    <img
+                        class="card-img-top"
+                        src="{{ url_for('upload_video.product_image', path=item.image) }}"
+                        alt="Product Image"
+                        loading="lazy">
+                    {% else %}
+                    <div class="card-img-top placeholder-img d-flex align-items-center justify-content-center">
+                        <div class="text-center text-muted px-3">
+                            <i class="ti ti-photo-off ti-lg mb-2 d-block"></i>
+                            <span class="small">Image not found</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if item.url and item.title %}
+                    <a
+                        href="{{ item.url }}"
+                        target="_blank"
+                        class="card-title text-truncate-link"
+                        title="{{ item.title }}">
+                        {{ truncate_title(item.title) }}
+                    </a>
+                    {% elif item.title %}
+                    <div class="card-title text-truncate-link" title="{{ item.title }}">
+                        {{ truncate_title(item.title) }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+        <div class="empty-header">404</div>
+        <p class="empty-title">No products found</p>
+        <p class="empty-subtitle text-muted">
+            The path list is empty or no valid folder paths were provided.
+        </p>
+        <div class="empty-action">
+            <a href="{{ url_for('upload_video.index') }}" class="btn btn-primary">
+                <i class="ti ti-arrow-left me-2"></i>
+                Back to Upload Runner
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

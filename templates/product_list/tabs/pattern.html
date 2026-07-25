@@ -1,0 +1,575 @@
+﻿<div class="card border-0">
+
+    <div class="card-body">
+
+        <h3 class="mb-3">
+            Upload Pattern Strategy
+        </h3>
+
+        <p class="text-secondary mb-4">
+
+            Gabungkan beberapa strategi upload menjadi satu workflow.
+            Setiap stage akan dijalankan secara berurutan hingga seluruh video selesai.
+
+        </p>
+
+        <div class="row mb-4">
+
+            <div class="col-md-4">
+
+                <label class="form-label">
+                    Start Date
+                </label>
+
+                <input
+                    id="pattern_start_date"
+                    type="date"
+                    class="form-control">
+
+            </div>
+
+        </div>
+
+        <div class="d-flex justify-content-end mb-4">
+
+            <button
+                id="btnAddStage"
+                type="button"
+                class="btn btn-primary"
+                onclick="addStage()">
+
+                <i class="ti ti-plus me-2"></i>
+
+                Add Stage
+
+            </button>
+
+        </div>
+
+        <div id="patternStages">
+
+            <!-- Stages will be rendered by JavaScript -->
+
+        </div>
+
+        <hr>
+
+        <div class="d-flex justify-content-end">
+
+            <button
+                id="btnNext"
+                type="button"
+                class="btn btn-primary"
+                onclick="submitPattern()">
+
+                Next
+
+                <i class="ti ti-arrow-right ms-2"></i>
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+let stages = [];
+let stageCounter = 0;
+
+function addStage() {
+    stageCounter++;
+    const stage = {
+        id: stageCounter,
+        duration: 7,
+        unit: 'days',
+        strategy: 'interval',
+        config: {
+            interval_hour: 24,
+            interval_minute: 0
+        }
+    };
+    stages.push(stage);
+    renderStages();
+}
+
+function deleteStage(stageId) {
+    stages = stages.filter(function(s) { return s.id !== stageId; });
+    stageCounter = stages.length;
+    renderStages();
+}
+
+function renderStages() {
+    const container = document.getElementById('patternStages');
+    container.innerHTML = '';
+
+    stages.forEach(function(stage, index) {
+        const stageNum = index + 1;
+        const strategy = stage.strategy;
+
+        const stageHtml = `
+            <div class="card mb-3" data-stage-id="${stage.id}">
+                <div class="card-header">
+                    <strong>
+                        Stage ${stageNum}
+                    </strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">
+                                Duration
+                            </label>
+                            <input
+                                type="number"
+                                class="form-control stage-duration"
+                                value="${stage.duration}"
+                                data-stage-id="${stage.id}"
+                                onchange="updateStageDuration(${stage.id}, this.value)">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">
+                                Unit
+                            </label>
+                            <select class="form-select stage-unit"
+                                data-stage-id="${stage.id}"
+                                onchange="updateStageUnit(${stage.id}, this.value)">
+                                <option value="days" ${stage.unit === 'days' ? 'selected' : ''}>Days</option>
+                                <option value="weeks" ${stage.unit === 'weeks' ? 'selected' : ''}>Weeks</option>
+                                <option value="months" ${stage.unit === 'months' ? 'selected' : ''}>Months</option>
+                                <option value="until_finish" ${stage.unit === 'until_finish' ? 'selected' : ''}>Until Finish</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">
+                                Upload Strategy
+                            </label>
+                            <select class="form-select stage-strategy"
+                                data-stage-id="${stage.id}"
+                                onchange="updateStageStrategy(${stage.id}, this.value)">
+                                <option value="interval" ${strategy === 'interval' ? 'selected' : ''}>Interval</option>
+                                <option value="fixed" ${strategy === 'fixed' ? 'selected' : ''}>Fixed Time</option>
+                                <option value="weekly" ${strategy === 'weekly' ? 'selected' : ''}>Weekly</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-danger w-100" onclick="deleteStage(${stage.id})">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="strategy-config" data-stage-id="${stage.id}">
+                        ${getStrategyConfigHTML(stage)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML += stageHtml;
+    });
+
+    if (stages.length === 0) {
+        container.innerHTML = `
+            <div class="text-secondary text-center py-4">
+                No stages added yet. Click "Add Stage" to begin.
+            </div>
+        `;
+    }
+}
+
+function getStrategyConfigHTML(stage) {
+    const strategy = stage.strategy;
+    const config = stage.config;
+
+    if (strategy === 'interval') {
+        return `
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        Interval Hour
+                    </label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        value="${config.interval_hour || 24}"
+                        min="1"
+                        onchange="updateStageConfig(${stage.id}, 'interval_hour', this.value)">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        Interval Minute
+                    </label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        value="${config.interval_minute || 0}"
+                        min="0"
+                        max="59"
+                        onchange="updateStageConfig(${stage.id}, 'interval_minute', this.value)">
+                </div>
+            </div>
+        `;
+    }
+
+    if (strategy === 'fixed') {
+        const times = config.times || [];
+        let timesHtml = '';
+        times.forEach(function(time, idx) {
+            timesHtml += `
+                <div class="row align-items-end mb-2">
+                    <div class="col-md-4">
+                        <input
+                            type="time"
+                            class="form-control"
+                            value="${time}"
+                            onchange="updateFixedTime(${stage.id}, ${idx}, this.value)">
+                    </div>
+                    <div class="col-md-auto">
+                        <button
+                            type="button"
+                            class="btn btn-danger"
+                            onclick="removeFixedTime(${stage.id}, ${idx})">
+                            <i class="ti ti-trash me-1"></i>
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        return `
+            <div class="row align-items-end mb-2">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        Upload Time
+                    </label>
+                    <input
+                        type="time"
+                        class="form-control"
+                        id="fixedTimeInput_${stage.id}">
+                </div>
+                <div class="col-md-auto">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        onclick="addFixedTime(${stage.id})">
+                        <i class="ti ti-plus me-1"></i>
+                        Add Time
+                    </button>
+                </div>
+            </div>
+            <div id="fixedTimeList_${stage.id}">
+                ${timesHtml || '<div class="text-secondary">No upload time added.</div>'}
+            </div>
+        `;
+    }
+
+    if (strategy === 'weekly') {
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const dayNameId = { Monday:'Senin', Tuesday:'Selasa', Wednesday:'Rabu', Thursday:'Kamis', Friday:'Jumat', Saturday:'Sabtu', Sunday:'Minggu' };
+        const schedule = config.schedule || {};
+
+        // Tentukan jumlah hari yang ditampilkan (hanya untuk unit=days)
+        var startDateVal = document.getElementById('pattern_start_date').value;
+        var displayCount = 7; // default: tampilkan 7 hari
+        if (stage.unit === 'days') {
+            var dur = parseInt(stage.duration);
+            if (!isNaN(dur) && dur > 0 && dur < 7) {
+                displayCount = dur;
+            }
+        }
+
+        // Tentukan urutan hari berdasarkan start date
+        var dayOrderForRender = [];
+        if (startDateVal) {
+            var startDayIndex = new Date(startDateVal).getDay(); // 0=Minggu, 1=Senin, ...
+            var jsDayToIndex = [6, 0, 1, 2, 3, 4, 5];
+            var offset = jsDayToIndex[startDayIndex];
+            for (var di = 0; di < displayCount; di++) {
+                dayOrderForRender.push(dayNames[(di + offset) % 7]);
+            }
+        } else {
+            // Jika start date belum dipilih, tampilkan Monday..Sunday
+            for (var di = 0; di < displayCount; di++) {
+                dayOrderForRender.push(dayNames[di]);
+            }
+        }
+
+        let weeklyHtml = '';
+        dayOrderForRender.forEach(function(day) {
+            const dayTimes = schedule[day] || [];
+            let badgesHtml = '';
+            if (dayTimes.length > 0) {
+                dayTimes.forEach(function(time) {
+                    badgesHtml += `
+                        <span class="badge bg-primary text-white me-2 mb-2">
+                            ${time}
+                            <a href="#"
+                                class="text-white text-decoration-none ms-2"
+                                onclick="removeWeeklyTimeStage(${stage.id}, '${day}', '${time}');return false;">
+                                ×
+                            </a>
+                        </span>
+                    `;
+                });
+            } else {
+                badgesHtml = '<span class="text-secondary">No upload schedule.</span>';
+            }
+
+            weeklyHtml += `
+                <div class="card mb-2">
+                    <div class="card-body py-2">
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <h5 class="mb-0">${dayNameId[day]}</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <input
+                                    type="time"
+                                    class="form-control"
+                                    id="weeklyTimeInput_${stage.id}_${day.toLowerCase()}">
+                            </div>
+                            <div class="col-md-auto">
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    onclick="addWeeklyTimeStage(${stage.id}, '${day}')">
+                                    <i class="ti ti-plus me-1"></i>
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2" id="weeklyTimeList_${stage.id}_${day.toLowerCase()}">
+                            ${badgesHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        return weeklyHtml;
+    }
+
+    return '<div class="text-secondary">Strategy configuration will appear here.</div>';
+}
+
+// Stage data update functions
+
+function updateStageDuration(stageId, value) {
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage) {
+        stage.duration = value;
+        // Re-render if weekly strategy (duration affects number of day cards)
+        if (stage.strategy === 'weekly') {
+            renderStages();
+        }
+    }
+}
+
+function updateStageUnit(stageId, value) {
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage) {
+        stage.unit = value;
+        // If unit is until_finish, duration doesn't matter but we keep it
+        if (value === 'until_finish') {
+            stage.duration = 'until_finish';
+        }
+        renderStages();
+    }
+}
+
+function updateStageStrategy(stageId, value) {
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage) {
+        stage.strategy = value;
+        // Initialize default config based on strategy
+        if (value === 'interval') {
+            stage.config = { interval_hour: 24, interval_minute: 0 };
+        } else if (value === 'fixed') {
+            stage.config = { times: [] };
+        } else if (value === 'weekly') {
+            stage.config = {
+                schedule: {
+                    Monday: [],
+                    Tuesday: [],
+                    Wednesday: [],
+                    Thursday: [],
+                    Friday: [],
+                    Saturday: [],
+                    Sunday: []
+                }
+            };
+        }
+        renderStages();
+    }
+}
+
+function updateStageConfig(stageId, key, value) {
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage) {
+        stage.config[key] = parseFloat(value);
+    }
+}
+
+// Fixed time functions for a stage
+
+function addFixedTime(stageId) {
+    const input = document.getElementById('fixedTimeInput_' + stageId);
+    const time = input.value;
+
+    if (!time) {
+        alert('Pilih jam upload.');
+        return;
+    }
+
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (!stage) return;
+
+    if (!stage.config.times) {
+        stage.config.times = [];
+    }
+
+    if (stage.config.times.includes(time)) {
+        alert('Jam sudah ada.');
+        return;
+    }
+
+    stage.config.times.push(time);
+    stage.config.times.sort();
+    input.value = '';
+    renderStages();
+}
+
+function removeFixedTime(stageId, index) {
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage && stage.config.times) {
+        stage.config.times.splice(index, 1);
+        renderStages();
+    }
+}
+
+// Weekly functions for a stage
+
+function addWeeklyTimeStage(stageId, day) {
+    const input = document.getElementById('weeklyTimeInput_' + stageId + '_' + day.toLowerCase());
+    const time = input.value;
+
+    if (!time) {
+        alert('Pilih jam upload.');
+        return;
+    }
+
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (!stage) return;
+
+    if (!stage.config.schedule) {
+        stage.config.schedule = {
+            Monday: [], Tuesday: [], Wednesday: [], Thursday: [],
+            Friday: [], Saturday: [], Sunday: []
+        };
+    }
+
+    if (stage.config.schedule[day].includes(time)) {
+        alert('Jam sudah ada.');
+        return;
+    }
+
+    stage.config.schedule[day].push(time);
+    stage.config.schedule[day].sort();
+    input.value = '';
+    renderStages();
+}
+
+function removeWeeklyTimeStage(stageId, day, time) {
+    const stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage && stage.config.schedule && stage.config.schedule[day]) {
+        stage.config.schedule[day] = stage.config.schedule[day].filter(function(t) {
+            return t !== time;
+        });
+        renderStages();
+    }
+}
+
+// Submit function
+
+function submitPattern() {
+    if (stages.length === 0) {
+        alert('Tambahkan minimal satu stage.');
+        return;
+    }
+
+    const uploadDirectory = document.getElementById('upload_directory').value.trim();
+    if (uploadDirectory === '') {
+        alert('Silakan isi Upload Directory.');
+        document.getElementById('upload_directory').focus();
+        return;
+    }
+
+    const startDate = document.getElementById('pattern_start_date').value;
+    if (!startDate) {
+        alert('Silakan pilih Start Date.');
+        document.getElementById('pattern_start_date').focus();
+        return;
+    }
+
+    // Build patternData array
+    const patternData = [];
+    stages.forEach(function(stage) {
+        const item = {
+            duration: stage.duration,
+            unit: stage.unit,
+            strategy: stage.strategy,
+            config: {}
+        };
+
+        if (stage.strategy === 'interval') {
+            item.config = {
+                interval_hour: parseInt(stage.config.interval_hour) || 0,
+                interval_minute: parseInt(stage.config.interval_minute) || 0
+            };
+        } else if (stage.strategy === 'fixed') {
+            item.config = {
+                times: stage.config.times || []
+            };
+        } else if (stage.strategy === 'weekly') {
+            item.config = {
+                Monday: stage.config.schedule ? stage.config.schedule.Monday || [] : [],
+                Tuesday: stage.config.schedule ? stage.config.schedule.Tuesday || [] : [],
+                Wednesday: stage.config.schedule ? stage.config.schedule.Wednesday || [] : [],
+                Thursday: stage.config.schedule ? stage.config.schedule.Thursday || [] : [],
+                Friday: stage.config.schedule ? stage.config.schedule.Friday || [] : [],
+                Saturday: stage.config.schedule ? stage.config.schedule.Saturday || [] : [],
+                Sunday: stage.config.schedule ? stage.config.schedule.Sunday || [] : []
+            };
+        }
+
+        patternData.push(item);
+    });
+
+    // Cek creator dulu baru submit
+    checkCreatorAndSubmit(function() {
+
+        const formData = new FormData();
+
+        formData.append('schedule_mode', 'pattern');
+        formData.append('products', JSON.stringify(selectedProducts));
+        formData.append('upload_directory', document.getElementById('upload_directory').value.trim());
+        formData.append('start_date', startDate);
+        formData.append('pattern', JSON.stringify(patternData));
+
+        submitFormWithFetch(formData);
+
+    });
+}
+
+// Initialize with one default stage
+document.addEventListener('DOMContentLoaded', function() {
+    addStage();
+    // Re-render when start date changes (affects weekly day order)
+    document.getElementById('pattern_start_date').addEventListener('change', function() {
+        renderStages();
+    });
+});
+</script>

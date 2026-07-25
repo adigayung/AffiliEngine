@@ -1,0 +1,57 @@
+<form method="POST" action="/setting/mysql/save">
+
+<div class="mb-3">
+    <label class="form-label">Host</label>
+    <input type="text" class="form-control" name="host" id="mysql_host">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Port</label>
+    <input type="text" class="form-control" name="port" id="mysql_port">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">User</label>
+    <input type="text" class="form-control" name="user" id="mysql_user">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Password</label>
+    <input type="password" class="form-control" name="password" id="mysql_password">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Database</label>
+    <input type="text" class="form-control" name="database" id="mysql_database">
+</div>
+
+<button class="btn btn-primary" type="submit">
+    Save MySQL Settings
+</button>
+
+</form>
+
+<script>
+
+async function loadMySQLConfig() {
+
+    try {
+        const res = await fetch("/setting/mysql/config");
+        const data = await res.json();
+
+        const mysql = data.mysql || {};
+
+        document.getElementById("mysql_host").value = mysql.host || "";
+        document.getElementById("mysql_port").value = mysql.port || "";
+        document.getElementById("mysql_user").value = mysql.user || "";
+        document.getElementById("mysql_password").value = mysql.password || "";
+        document.getElementById("mysql_database").value = mysql.database || "";
+
+    } catch (err) {
+        console.error("Failed to load MySQL config:", err);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", loadMySQLConfig);
+
+</script>

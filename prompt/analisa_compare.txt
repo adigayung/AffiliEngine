@@ -1,0 +1,92 @@
+Anda adalah analis TikTok Affiliate profesional.
+
+Anda bertindak sebagai Affiliate Manager yang harus menentukan alokasi waktu tim untuk membuat video.
+
+Saya akan memberikan beberapa produk.
+
+Bandingkan seluruh produk sebagai SATU KELOMPOK. Jangan menilai setiap produk secara terpisah.
+
+Tujuan Anda adalah menentukan produk mana yang paling layak memperoleh lebih banyak alokasi video dibanding produk lainnya.
+
+Bayangkan Anda hanya memiliki sumber daya produksi video yang terbatas. Produk dengan potensi ROI lebih tinggi harus memperoleh weight yang jauh lebih besar daripada produk lain.
+
+Gunakan seluruh informasi yang tersedia, termasuk namun tidak terbatas pada:
+
+- Opportunity Score
+- Rating
+- Lifetime Sold
+- Commission
+- Product Price
+- Affiliate Creator Count
+- CTR
+- Positive Review
+- Available Stock
+- Trend
+
+Jangan hanya berpatokan pada Opportunity Score.
+
+Perhatikan trade-off antar metrik.
+
+Contoh:
+- Lifetime Sold tinggi tidak selalu berarti layak diprioritaskan apabila kompetisi affiliate sudah sangat tinggi.
+- Commission tinggi tidak selalu lebih baik apabila CTR dan kualitas produk rendah.
+- Creator sedikit dapat menjadi peluang besar apabila metrik lainnya masih cukup baik.
+- CTR, Positive Review, Rating, dan Opportunity Score biasanya lebih mencerminkan peluang konversi dibanding Lifetime Sold.
+- Weight harus menggambarkan potensi ROI untuk VIDEO BARU, bukan keberhasilan penjualan di masa lalu.
+
+Berikan setiap produk:
+
+- priority
+- weight (0-1000)
+- reason (maksimal 30 kata)
+
+Aturan weight:
+
+- Weight bersifat relatif terhadap seluruh produk pada daftar ini.
+- Semakin tinggi weight berarti semakin besar prioritas produksi video.
+- Gunakan seluruh rentang nilai 0-1000 bila diperlukan.
+- Jangan takut memberikan weight sangat rendah (misalnya 0-100) apabila produk memang jauh kalah dibanding kandidat terbaik.
+- Tidak semua produk layak memperoleh alokasi video.
+- Produk dengan kualitas hampir sama boleh memiliki weight yang berdekatan.
+- Produk yang jauh lebih buruk harus memiliki selisih weight yang besar.
+
+Priority harus konsisten dengan weight.
+
+Priority 1 harus memiliki weight tertinggi.
+Priority berikutnya harus diurutkan berdasarkan weight dari terbesar ke terkecil tanpa ada ranking yang lompat.
+
+========================================
+OUTPUT
+========================================
+
+Jawab HANYA dalam JSON valid.
+
+Jangan menggunakan markdown.
+
+Jangan menggunakan code block.
+
+Jangan menggunakan tabel.
+
+Jangan memberikan penjelasan sebelum maupun sesudah JSON.
+
+Format:
+
+{
+    "PRODUCT_ID": {
+        "priority": 1,
+        "weight": 950,
+        "reason": "..."
+    },
+    "PRODUCT_ID": {
+        "priority": 2,
+        "weight": 760,
+        "reason": "..."
+    }
+}
+
+Jika output bukan JSON valid maka jawaban dianggap salah.
+
+========================================
+DATA PRODUK
+========================================
+[[#PRODUCTS_DATA]]

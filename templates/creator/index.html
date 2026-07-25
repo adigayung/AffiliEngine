@@ -1,0 +1,352 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Creator List{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <div class="page-header d-print-none">
+
+        <div class="container-xl">
+
+            <div class="row g-2 align-items-center">
+
+                <div class="col">
+
+                    <h2 class="page-title">
+                        Creator List
+                    </h2>
+
+                    <div class="text-secondary">
+                        Manage your TikTok creator accounts.
+                    </div>
+
+                </div>
+
+                <div class="col-auto">
+
+                    <button
+                        class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalAddCreator">
+
+                        <i class="ti ti-plus"></i>
+                        Add Creator
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="page-body">
+
+        <div class="container-xl">
+
+            <div class="card">
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive">
+
+                        <table class="table table-vcenter card-table table-hover">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th width="70">ID</th>
+
+                                    <th>Username</th>
+
+                                    <th>Display Name</th>
+
+                                    <th width="120">Status</th>
+
+                                    <th width="180">Created</th>
+
+                                    <th width="180" class="text-center">
+                                        Action
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {% if creators %}
+
+                                    {% for creator in creators %}
+
+                                    <tr>
+
+                                        <td>
+                                            {{ creator.id }}
+                                        </td>
+
+                                        <td>
+                                            {{ creator.username }}
+                                        </td>
+
+                                        <td>
+                                            {{ creator.display_name }}
+                                        </td>
+
+                                        <td>
+
+                                            {% if creator.is_active %}
+
+                                                <span class="badge bg-green-lt">
+                                                    Active
+                                                </span>
+
+                                            {% else %}
+
+                                                <span class="badge bg-red-lt">
+                                                    Inactive
+                                                </span>
+
+                                            {% endif %}
+
+                                        </td>
+
+                                        <td>
+                                            {{ creator.created_at }}
+                                        </td>
+
+                                        <td class="text-center">
+
+                                            <button class="btn btn-sm btn-warning">
+                                                <i class="ti ti-edit"></i>
+                                                Edit
+                                            </button>
+
+                                            <button class="btn btn-sm btn-danger">
+                                                <i class="ti ti-trash"></i>
+                                                Delete
+                                            </button>
+
+                                        </td>
+
+                                    </tr>
+
+                                    {% endfor %}
+
+                                {% else %}
+
+                                    <tr>
+
+                                        <td colspan="6" class="text-center text-secondary py-5">
+
+                                            <i class="ti ti-users fs-1"></i>
+
+                                            <br><br>
+
+                                            No creator found.
+
+                                        </td>
+
+                                    </tr>
+
+                                {% endif %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ======================================== -->
+<!-- ADD CREATOR MODAL -->
+<!-- ======================================== -->
+
+<div class="modal modal-blur fade" id="modalAddCreator" tabindex="-1">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Add Creator
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <form id="formAddCreator">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Username
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="creator_username"
+                            name="username"
+                            placeholder="mirai"
+                            autocomplete="off"
+                            required>
+
+                        <small class="text-secondary">
+                            Unique username.
+                        </small>
+
+                    </div>
+
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Display Name
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="creator_display_name"
+                            name="display_name"
+                            placeholder="Mirai"
+                            required>
+
+                    </div>
+
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Profile Image
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="creator_profile_image"
+                            name="profile_image"
+                            placeholder="/static/creator/mirai.jpg">
+
+                    </div>
+
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-link"
+                        data-bs-dismiss="modal">
+
+                        Cancel
+
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+
+                        <i class="ti ti-device-floppy"></i>
+                        Save Creator
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+document
+.getElementById("formAddCreator")
+.addEventListener("submit", function(e){
+
+    e.preventDefault();
+
+    const data = {
+
+        username: document.getElementById("creator_username").value.trim(),
+
+        display_name: document.getElementById("creator_display_name").value.trim(),
+
+        profile_image: document.getElementById("creator_profile_image").value.trim()
+
+    };
+
+    fetch("/creator/add", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify(data)
+
+    })
+
+    .then(response => response.json())
+
+    .then(result => {
+
+        console.log(result);
+
+        if(result.success){
+
+            alert("Creator berhasil ditambahkan.");
+
+            location.reload();
+
+        }else{
+
+            alert(result.message);
+
+        }
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+
+        alert("Terjadi kesalahan.");
+
+    });
+
+});
+
+</script>
+
+{% endblock %}

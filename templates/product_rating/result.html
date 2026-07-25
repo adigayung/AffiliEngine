@@ -1,0 +1,229 @@
+{% if analysis %}
+
+<div class="card mt-4 border-primary">
+
+    <div class="card-header">
+        <h3 class="card-title">
+            📊 Opportunity Analysis
+        </h3>
+    </div>
+
+    <div class="card-body">
+
+        <!-- ================================================= -->
+        <!-- TOP SCORE -->
+        <!-- ================================================= -->
+
+        <div class="text-center mb-4">
+
+            <div class="display-2 fw-bold text-primary">
+                {{ analysis.opportunity_score }}
+            </div>
+
+            <div class="text-secondary">
+                Opportunity Score
+            </div>
+
+            <div class="mt-2">
+
+                <span class="badge bg-success">
+                    {{ analysis.rating }}
+                </span>
+
+                <span class="ms-2">
+                    {% for i in range(analysis.stars) %}
+                        ⭐
+                    {% endfor %}
+                </span>
+
+            </div>
+
+            <div class="text-muted mt-1">
+                {{ analysis.status }}
+            </div>
+
+        </div>
+
+        <!-- ================================================= -->
+        <!-- SCORES -->
+        <!-- ================================================= -->
+
+        <div class="row">
+
+            <div class="col-md-4 col-6 mb-3">
+                <div class="card bg-primary-lt">
+                    <div class="card-body text-center">
+                        <div class="text-secondary">Demand</div>
+                        <div class="h1">
+                            {{ analysis.scores.demand.score }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-6 mb-3">
+                <div class="card bg-green-lt">
+                    <div class="card-body text-center">
+                        <div class="text-secondary">Conversion</div>
+                        <div class="h1">
+                            {{ analysis.scores.conversion.score }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-6 mb-3">
+                <div class="card bg-yellow-lt">
+                    <div class="card-body text-center">
+                        <div class="text-secondary">Quality</div>
+                        <div class="h1">
+                            {{ analysis.scores.product_quality.score }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-6 mb-3">
+                <div class="card bg-cyan-lt">
+                    <div class="card-body text-center">
+                        <div class="text-secondary">Commission</div>
+                        <div class="h1">
+                            {{ analysis.scores.commission.score }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-6 mb-3">
+                <div class="card bg-purple-lt">
+                    <div class="card-body text-center">
+                        <div class="text-secondary">
+                            Market Opportunity
+                        </div>
+                        <div class="h1">
+                            {{ analysis.scores.market.score }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================================================= -->
+        <!-- EXTRA INFO -->
+        <!-- ================================================= -->
+
+        <div class="alert alert-info mt-3">
+
+            <div>
+                <strong>Demand per Creator :</strong>
+                {{ analysis.scores.market.value.demand_per_creator }}
+            </div>
+
+            <div class="mt-2">
+                <strong>Rating :</strong>
+                {{ analysis.rating }}
+                ({{ analysis.status }})
+            </div>
+
+        </div>
+
+        <!-- ================================================= -->
+        <!-- SUMMARY -->
+        <!-- ================================================= -->
+
+        {% if analysis.summary %}
+
+        <div class="mt-3">
+
+            <h5>Insight</h5>
+
+            <ul class="mb-0">
+
+                {% for item in analysis.summary %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+
+            </ul>
+
+        </div>
+        {% endif %}
+
+        {% include "product_rating/product_info.html" %}
+        
+        <!-- ================================================= -->
+        <!-- LLM CONCLUSION -->
+        <!-- ================================================= -->
+
+        {% if hasil_llm %}
+
+        <hr class="my-4">
+
+        <div>
+
+            <a
+                class="d-flex align-items-center text-decoration-none"
+                data-bs-toggle="collapse"
+                href="#llmConclusion"
+                role="button"
+                aria-expanded="false"
+                aria-controls="llmConclusion"
+            >
+
+                <span id="llmArrow" class="me-2">
+                    ▶
+                </span>
+
+                <strong>
+                    AI Opportunity Conclusion
+                </strong>
+
+            </a>
+            
+            <div
+                class="collapse mt-3"
+                id="llmConclusion"
+            >
+
+                <div class="card card-body bg-light">
+
+                    <div style="white-space: pre-wrap;">
+                        {{ hasil_llm }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const collapse = document.getElementById("llmConclusion");
+
+    if (!collapse)
+        return;
+
+    const arrow = document.getElementById("llmArrow");
+
+    collapse.addEventListener("show.bs.collapse", function () {
+        arrow.textContent = "▼";
+    });
+
+    collapse.addEventListener("hide.bs.collapse", function () {
+        arrow.textContent = "▶";
+    });
+
+});
+
+</script>
+
+{% endif %}

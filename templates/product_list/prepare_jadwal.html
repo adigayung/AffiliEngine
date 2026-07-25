@@ -1,0 +1,560 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="card">
+
+    <div class="card-header">
+
+        <h3 class="card-title">
+            Generate Upload Schedule
+        </h3>
+
+    </div>
+
+    <div class="card-body">
+
+        <!-- SUMMARY -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-md-3">
+
+                <div class="card bg-primary-lt">
+
+                    <div class="card-body text-center">
+
+                        <div class="text-secondary">
+
+                            Total Product
+
+                        </div>
+
+                        <div class="display-6 fw-bold">
+
+                            {{ products|length }}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+
+                <div class="card bg-green-lt">
+
+                    <div class="card-body text-center">
+
+                        <div class="text-secondary">
+
+                            Total Video
+
+                        </div>
+
+                        <div class="display-6 fw-bold">
+
+                            <span id="totalVideo"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+<!-- OUTPUT DIRECTORY -->
+
+<div class="mb-4">
+
+    <label class="form-label">
+
+        Upload Directory
+        <span class="text-danger">*</span>
+
+    </label>
+
+    <div class="input-group">
+
+        <span class="input-group-text">
+
+            <i class="ti ti-folder"></i>
+
+        </span>
+
+        <input
+            id="upload_directory"
+            type="text"
+            class="form-control"
+            placeholder="Contoh: D:\TikTok\Upload">
+
+    </div>
+
+    <div class="form-hint">
+
+        Folder tempat file video yang akan dijadwalkan berada.
+
+    </div>
+
+</div>
+
+        <!-- NAV TAB -->
+        <ul class="nav nav-tabs" data-bs-toggle="tabs">
+
+            <li class="nav-item">
+
+                <a
+                    href="#tab-interval"
+                    class="nav-link active"
+                    data-bs-toggle="tab">
+
+                    <i class="ti ti-clock me-2"></i>
+
+                    Interval
+
+                </a>
+
+            </li>
+
+            <li class="nav-item">
+
+                <a
+                    href="#tab-fixed"
+                    class="nav-link"
+                    data-bs-toggle="tab">
+
+                    <i class="ti ti-clock-hour-8 me-2"></i>
+
+                    Fixed Time
+
+                </a>
+
+            </li>
+
+            <li class="nav-item">
+
+                <a
+                    href="#tab-weekly"
+                    class="nav-link"
+                    data-bs-toggle="tab">
+
+                    <i class="ti ti-calendar-week me-2"></i>
+
+                    Weekly
+
+                </a>
+
+            </li>
+
+            <li class="nav-item">
+
+                <a
+                    href="#tab-pattern"
+                    class="nav-link"
+                    data-bs-toggle="tab">
+
+                    <i class="ti ti-calendar-stats me-2"></i>
+
+                    Pattern
+
+                </a>
+
+            </li>
+
+            <li class="nav-item">
+
+                <a
+                    href="#tab-import"
+                    class="nav-link"
+                    data-bs-toggle="tab">
+
+                    <i class="ti ti-file-import me-2"></i>
+
+                    Import
+
+                </a>
+            </li>
+
+        </ul>
+
+        <!-- CONTENT -->
+        <div class="tab-content mt-3">
+
+            <div class="tab-pane active show" id="tab-interval">
+
+                {% include 'product_list/tabs/interval.html' %}
+
+            </div>
+
+            <div class="tab-pane" id="tab-fixed">
+
+                {% include 'product_list/tabs/fixed_time.html' %}
+
+            </div>
+
+            <div class="tab-pane" id="tab-weekly">
+
+                {% include 'product_list/tabs/weekly.html' %}
+
+            </div>
+
+            <div class="tab-pane" id="tab-pattern">
+
+                {% include 'product_list/tabs/pattern.html' %}
+
+            </div>
+
+            <div class="tab-pane" id="tab-import">
+
+                {% include 'product_list/tabs/import_schedule.html' %}
+
+            </div>
+
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ======================================== -->
+<!-- SELECT CREATOR MODAL -->
+<!-- ======================================== -->
+<div class="modal modal-blur fade" id="modalSelectCreator" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+
+        <div class="modal-content">
+
+            <div class="modal-body text-center py-5">
+
+                <div class="mb-4">
+
+                    <i class="ti ti-user-circle text-muted" style="font-size: 4rem;"></i>
+
+                </div>
+
+                <h4 class="mb-2">
+                    Select Creator
+                </h4>
+
+                <p class="text-secondary mb-4">
+
+                    Anda harus memilih Creator terlebih dahulu
+                    sebelum membuat jadwal.
+
+                </p>
+
+                <div id="creatorListModal" class="list-group list-group-flush text-start mb-4">
+
+                </div>
+
+                <div id="creatorModalLoading" class="text-secondary py-3" style="display:none;">
+
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+
+                    Memuat daftar creator...
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const selectedProducts = {{ products | tojson }};
+console.log("selectedProducts:", selectedProducts);
+
+let total = 0;
+
+Object.values(selectedProducts).forEach(function(qty){
+
+    total += qty;
+
+});
+
+document.getElementById("totalVideo").textContent = total;
+
+// ==============================
+// CREATOR CHECK + PENDING SUBMIT
+// ==============================
+
+let pendingSubmitCallback = null;
+
+/**
+ * checkCreatorAndSubmit:
+ *   Cek apakah creator sudah dipilih.
+ *   Jika YA - langsung jalankan callback(submitForm) dan selesai.
+ *   Jika TIDAK - simpan callback sbg pending, tampilkan modal creator.
+ *     Setelah user pilih creator, jalankan callback yg tersimpan.
+ */
+function checkCreatorAndSubmit(submitCallback) {
+
+    fetch('/product_list/prepare_upload/check_creator')
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(result) {
+
+            if (result.success) {
+                // Creator sudah ada, langsung submit
+                submitCallback();
+            } else {
+                // Simpan callback untuk nanti
+                pendingSubmitCallback = submitCallback;
+                // Tampilkan modal
+                showCreatorModal(result.creators);
+            }
+
+        })
+        .catch(function(err) {
+            console.error('Error checking creator:', err);
+            submitCallback();
+        });
+
+}
+
+// ==============================
+// SUBMIT FORM VIA FETCH
+// ==============================
+
+function submitFormWithFetch(formData) {
+
+    var anyBtn = document.querySelector('[id^="btnNext"]');
+    if (anyBtn) {
+        anyBtn.disabled = true;
+        anyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+    }
+
+    fetch('/product_list/prepare_upload/buat_jadwal', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(response) {
+
+        var contentType = response.headers.get('Content-Type') || '';
+
+        if (contentType.includes('application/json')) {
+
+            return response.json().then(function(json) {
+
+                if (json.require_creator) {
+
+                    if (anyBtn) {
+                        anyBtn.disabled = false;
+                        anyBtn.innerHTML = 'Next <i class="ti ti-arrow-right ms-2"></i>';
+                    }
+
+                    pendingSubmitCallback = function() {
+                        submitFormWithFetch(formData);
+                    };
+
+                    fetch('/product_list/prepare_upload/check_creator')
+                        .then(function(r) { return r.json(); })
+                        .then(function(checkResult) {
+                            showCreatorModal(checkResult.creators || []);
+                        });
+
+                } else {
+                    alert('Error: ' + (json.message || 'Unknown error'));
+                    if (anyBtn) {
+                        anyBtn.disabled = false;
+                        anyBtn.innerHTML = 'Next <i class="ti ti-arrow-right ms-2"></i>';
+                    }
+                }
+
+            });
+
+        } else {
+
+            return response.text().then(function(html) {
+                document.open();
+                document.write(html);
+                document.close();
+            });
+
+        }
+
+    })
+    .catch(function(err) {
+
+        console.error('Submit error:', err);
+        alert('Gagal submit form: ' + err.message);
+
+        var anyBtn = document.querySelector('[id^="btnNext"]');
+        if (anyBtn) {
+            anyBtn.disabled = false;
+            anyBtn.innerHTML = 'Next <i class="ti ti-arrow-right ms-2"></i>';
+        }
+
+    });
+
+}
+
+// ==============================
+// CREATOR MODAL
+// ==============================
+
+function showCreatorModal(creators) {
+
+    const container = document.getElementById('creatorListModal');
+    const loading = document.getElementById('creatorModalLoading');
+
+    container.innerHTML = '';
+    loading.style.display = 'none';
+
+    if (!creators || creators.length === 0) {
+
+        container.innerHTML =
+            '<div class="text-center text-secondary py-3">' +
+                '<i class="ti ti-alert-circle me-2"></i>' +
+                'Tidak ada Creator. Silakan tambah Creator terlebih dahulu.' +
+            '</div>' +
+            '<div class="text-center mt-2">' +
+                '<a href="/creator" class="btn btn-outline-primary btn-sm">' +
+                    '<i class="ti ti-plus me-1"></i> Tambah Creator' +
+                '</a>' +
+            '</div>';
+
+    } else {
+
+        creators.forEach(function(creator) {
+
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action d-flex align-items-center py-3 creator-select-modal';
+            item.dataset.id = creator.id;
+
+            item.innerHTML =
+                '<span class="avatar avatar-sm me-3">' +
+                    (creator.profile_image
+                        ? '<img src="' + creator.profile_image + '" class="avatar-img rounded-circle" alt="">'
+                        : '<i class="ti ti-user"></i>'
+                    ) +
+                '</span>' +
+                '<div class="flex-fill">' +
+                    '<div class="fw-semibold">' + creator.display_name + '</div>' +
+                    '<div class="small text-secondary">@' + creator.username + '</div>' +
+                '</div>' +
+                '<i class="ti ti-chevron-right text-muted"></i>';
+
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                selectCreator(creator.id);
+            });
+
+            container.appendChild(item);
+
+        });
+
+    }
+
+    var modal = new bootstrap.Modal(document.getElementById('modalSelectCreator'));
+    modal.show();
+
+}
+
+function selectCreator(creatorId) {
+
+    const container = document.getElementById('creatorListModal');
+    container.innerHTML =
+        '<div class="text-center text-secondary py-3">' +
+            '<div class="spinner-border spinner-border-sm me-2" role="status"></div>' +
+            'Memilih Creator...' +
+        '</div>';
+
+    fetch('/creator/select', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            creator_id: creatorId
+        })
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(result) {
+
+        if (result.success) {
+
+            var modalEl = document.getElementById('modalSelectCreator');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+
+            document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+                el.remove();
+            });
+            document.body.classList.remove('modal-open');
+
+            updateHeaderCreator(creatorId);
+
+            if (typeof pendingSubmitCallback === 'function') {
+                var cb = pendingSubmitCallback;
+                pendingSubmitCallback = null;
+                cb();
+            }
+
+        } else {
+
+            alert('Gagal memilih Creator: ' + (result.message || 'Unknown error'));
+
+            fetch('/product_list/prepare_upload/check_creator')
+                .then(function(r) { return r.json(); })
+                .then(function(checkResult) {
+                    showCreatorModal(checkResult.creators || []);
+                });
+
+        }
+
+    })
+    .catch(function(err) {
+
+        alert('Gagal menghubungi server: ' + err.message);
+
+        fetch('/product_list/prepare_upload/check_creator')
+            .then(function(r) { return r.json(); })
+            .then(function(checkResult) {
+                showCreatorModal(checkResult.creators || []);
+            });
+
+    });
+
+}
+
+function updateHeaderCreator(creatorId) {
+
+    var creatorItems = document.querySelectorAll('.creator-select');
+    creatorItems.forEach(function(item) {
+
+        var existingCheck = item.querySelector('.ti-check');
+        if (existingCheck) {
+            existingCheck.remove();
+        }
+
+        if (item.dataset.id == creatorId) {
+            var check = document.createElement('i');
+            check.className = 'ti ti-check text-success ms-2';
+            item.appendChild(check);
+        }
+
+    });
+
+}
+
+</script>
+
+{% endblock %}

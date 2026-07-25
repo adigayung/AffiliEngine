@@ -1,0 +1,1000 @@
+<div class="card border-0">
+
+    <div class="card-body">
+
+        <h3 class="mb-3">
+            <i class="ti ti-file-import me-2"></i>
+            Import Schedule - Pattern Editor
+        </h3>
+
+        <p class="text-secondary mb-4">
+            Unggah file <code>upload_schedule.json</code> untuk
+            menganalisis pola jadwal. Aplikasi akan membaca,
+            menganalisis, mengompresi pattern, lalu menampilkannya
+            sebagai <strong>Pattern Editor</strong> yang dapat diedit.
+        </p>
+
+        <!-- ============================== -->
+        <!-- FILE INPUT -->
+        <!-- ============================== -->
+        <div class="row mb-4">
+
+            <div class="col-md-6">
+
+                <label class="form-label">
+                    Upload Schedule File
+                    <span class="text-danger">*</span>
+                </label>
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+                        <i class="ti ti-file-json"></i>
+                    </span>
+
+                    <input
+                        id="import_file"
+                        type="file"
+                        class="form-control"
+                        accept=".json">
+
+                </div>
+
+                <div class="form-hint">
+
+                    Pilih file <code>upload_schedule.json</code>
+                    yang akan dianalisis polanya.
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ============================== -->
+        <!-- ACTION BUTTONS -->
+        <!-- ============================== -->
+        <div class="d-flex justify-content-start mb-4">
+
+            <button
+                id="btnAnalyze"
+                type="button"
+                class="btn btn-primary"
+                onclick="analyzeImportFile()"
+                disabled>
+
+                <i class="ti ti-analysis me-2"></i>
+                Analyze & Extract Pattern
+
+            </button>
+
+        </div>
+
+        <!-- ============================== -->
+        <!-- RESULT AREA -->
+        <!-- ============================== -->
+        <div id="importResult" style="display:none;">
+
+            <hr>
+
+            <!-- ============================== -->
+            <!-- ANALYSIS RESULT PANEL -->
+            <!-- ============================== -->
+            <div id="analysisPanel" class="alert d-none mb-4" role="alert">
+            </div>
+
+            <!-- ============================== -->
+            <!-- SUMMARY STATS -->
+            <!-- ============================== -->
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-2">
+
+                    <div class="card bg-primary-lt">
+
+                        <div class="card-body text-center py-3">
+
+                            <div class="text-secondary extra-small">
+                                Total Upload
+                            </div>
+
+                            <div class="fs-3 fw-bold" id="totalUploads">
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <div class="card bg-info-lt">
+
+                        <div class="card-body text-center py-3">
+
+                            <div class="text-secondary extra-small">
+                                Total Days
+                            </div>
+
+                            <div class="fs-3 fw-bold" id="totalDays">
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="card bg-green-lt">
+
+                        <div class="card-body text-center py-3">
+
+                            <div class="text-secondary extra-small">
+                                Pattern Length
+                            </div>
+
+                            <div class="fs-3 fw-bold" id="patternLength">
+                                -
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <div class="card bg-orange-lt">
+
+                        <div class="card-body text-center py-3">
+
+                            <div class="text-secondary extra-small">
+                                Repeat Count
+                            </div>
+
+                            <div class="fs-3 fw-bold" id="repeatCount">
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="card bg-cyan-lt">
+
+                        <div class="card-body text-center py-3">
+
+                            <div class="text-secondary extra-small">
+                                Compression
+                            </div>
+
+                            <div class="fs-3 fw-bold" id="compressionRatio">
+                                0%
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================== -->
+            <!-- PATTERN DETECTION INFO -->
+            <!-- ============================== -->
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-6">
+
+                    <div class="card">
+
+                        <div class="card-header">
+
+                            <h4 class="card-title">
+                                <i class="ti ti-star me-2 text-warning"></i>
+                                Initial Pattern
+                            </h4>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <div id="initialPatternDesc" class="text-secondary mb-2">
+                                -
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="card">
+
+                        <div class="card-header">
+
+                            <h4 class="card-title">
+                                <i class="ti ti-repeat me-2 text-success"></i>
+                                Repeat Pattern
+                            </h4>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <div id="repeatPatternDesc" class="text-secondary mb-2">
+                                -
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================== -->
+            <!-- PATTERN EDITOR -->
+            <!-- ============================== -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <div class="d-flex justify-content-between align-items-center w-100">
+
+                        <h4 class="card-title mb-0">
+                            <i class="ti ti-edit me-2"></i>
+                            Pattern Editor
+                        </h4>
+
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addTimeToCurrentDay()">
+                                <i class="ti ti-plus me-1"></i>
+                                Tambah Jam
+                            </button>
+                            <small class="text-secondary">
+                                Klik jam untuk mengedit. Klik <i class="ti ti-trash text-danger"></i> untuk menghapus.
+                            </small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="card-body p-0">
+
+                    <!-- INITIAL PATTERN EDITOR -->
+                    <div id="initialPatternEditor">
+
+                        <div class="p-3 bg-warning bg-opacity-10 border-bottom">
+
+                            <div class="fw-semibold text-warning mb-2">
+                                <i class="ti ti-star me-1"></i>
+                                Initial Pattern
+                            </div>
+
+                            <div id="initialPatternDays" class="row g-2">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- REPEAT PATTERN EDITOR -->
+                    <div id="repeatPatternEditor">
+
+                        <div class="p-3 bg-success bg-opacity-10">
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+
+                                <div class="fw-semibold text-success">
+                                    <i class="ti ti-repeat me-1"></i>
+                                    Repeat Pattern
+                                </div>
+
+                                <span id="repeatStatusBadge" class="badge bg-success"></span>
+
+                            </div>
+
+                            <div id="repeatPatternDays" class="row g-2">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================== -->
+            <!-- GENERATE SETTINGS -->
+            <!-- ============================== -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h4 class="card-title">
+                        <i class="ti ti-settings me-2"></i>
+                        Generate Settings
+                    </h4>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <label class="form-label">
+                                Start Date
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <input
+                                id="import_start_date"
+                                type="date"
+                                class="form-control">
+
+                            <div class="form-hint">
+                                Tanggal mulai untuk jadwal baru.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+                    <button
+                        id="btnReset"
+                        type="button"
+                        class="btn btn-outline-warning"
+                        onclick="resetToOriginalPattern()">
+
+                        <i class="ti ti-refresh me-2"></i>
+                        Reset to Original Pattern
+
+                    </button>
+                </div>
+
+                <button
+                    id="btnGenerate"
+                    type="button"
+                    class="btn btn-success"
+                    onclick="generateFromImport()"
+                    disabled>
+
+                    <i class="ti ti-player-play me-2"></i>
+                    Next
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ============================== -->
+<!-- TIME EDITOR MODAL -->
+<!-- ============================== -->
+<div class="modal modal-sm fade" id="timeEditorModal" tabindex="-1">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    <i class="ti ti-clock-edit me-2"></i>
+                    Edit Upload Time
+                </h5>
+
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="editTimeSection" value="">
+                <input type="hidden" id="editTimeDayIdx" value="">
+                <input type="hidden" id="editTimeIdx" value="">
+
+                <label class="form-label">
+                    Hour : Minute
+                </label>
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+                        <i class="ti ti-clock"></i>
+                    </span>
+
+                    <input
+                        id="editTimeInput"
+                        type="time"
+                        class="form-control"
+                        step="60">
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn btn-danger me-auto" id="btnDeleteTime" onclick="deleteEditedTime()">
+                    <i class="ti ti-trash me-1"></i>
+                    Hapus
+                </button>
+
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Batal
+                </button>
+
+                <button type="button" class="btn btn-primary" onclick="saveEditedTime()">
+                    <i class="ti ti-device-floppy me-1"></i>
+                    Simpan
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+// ==============================
+// IMPORT SCHEDULE - STATE
+// ==============================
+
+let importState = {
+    analyzed: false,
+    originalPattern: null,     // backup pattern as returned from server
+    initialPattern: [],        // editable initial pattern days: [{day:1, times:["08:00",...]}, ...]
+    repeatPattern: [],         // editable repeat pattern days
+    allTimes: [],
+    valid: false,
+    analysisInfo: null
+};
+
+// ==============================
+// FILE INPUT HANDLER
+// ==============================
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    const fileInput = document.getElementById('import_file');
+
+    fileInput.addEventListener('change', function() {
+
+        const btnAnalyze = document.getElementById('btnAnalyze');
+
+        if (this.files && this.files.length > 0) {
+
+            btnAnalyze.disabled = false;
+
+        } else {
+
+            btnAnalyze.disabled = true;
+
+        }
+
+    });
+
+});
+
+// ==============================
+// ANALYZE
+// ==============================
+
+function analyzeImportFile() {
+
+    const fileInput = document.getElementById('import_file');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+
+        alert('Silakan pilih file upload_schedule.json terlebih dahulu.');
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (!file.name.endsWith('.json')) {
+
+        alert('File harus berupa file JSON (.json).');
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+
+        try {
+
+            const jsonData = JSON.parse(e.target.result);
+
+            if (!jsonData.folders || !Array.isArray(jsonData.folders)) {
+
+                alert('Format file tidak valid. File harus memiliki key "folders" berupa array.');
+                return;
+            }
+
+            if (jsonData.folders.length === 0) {
+
+                alert('File tidak memiliki data folder.');
+                return;
+            }
+
+            sendForAnalysis(jsonData);
+
+        } catch (err) {
+
+            alert('File JSON tidak valid: ' + err.message);
+
+        }
+
+    };
+
+    reader.readAsText(file);
+
+}
+
+function sendForAnalysis(jsonData) {
+
+    const form = new FormData();
+    form.append('json_data', JSON.stringify(jsonData));
+
+    fetch('/product_list/prepare_upload/import_analyze', {
+        method: 'POST',
+        body: form
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(result) {
+
+        if (result.success) {
+
+            // Store original pattern data
+            importState.originalPattern = JSON.parse(JSON.stringify(result.pattern));
+            importState.initialPattern = JSON.parse(JSON.stringify(result.pattern.initial_pattern));
+            importState.repeatPattern = JSON.parse(JSON.stringify(result.pattern.repeat_pattern));
+            importState.allTimes = result.pattern.all_times_sorted || [];
+            importState.analysisInfo = result.analysis;
+            importState.analyzed = true;
+            importState.valid = true;
+
+            displayAnalysisResult(result);
+            renderPatternEditor();
+
+            document.getElementById('importResult').style.display = 'block';
+            document.getElementById('btnGenerate').disabled = false;
+
+        } else {
+
+            alert('Analisis gagal: ' + (result.error || 'Unknown error'));
+
+        }
+
+    })
+    .catch(function(err) {
+
+        alert('Gagal menghubungi server: ' + err.message);
+
+    });
+
+}
+
+// ==============================
+// DISPLAY RESULT
+// ==============================
+
+function displayAnalysisResult(result) {
+
+    const p = result.pattern;
+    const a = result.analysis;
+
+    // Summary stats
+    document.getElementById('totalUploads').textContent = a.total_uploads;
+    document.getElementById('totalDays').textContent = a.total_days;
+    document.getElementById('patternLength').textContent = a.pattern_length + ' hari';
+    document.getElementById('repeatCount').textContent = p.repeat_count + 'x';
+    document.getElementById('compressionRatio').textContent = a.compression_ratio + '%';
+
+    // Analysis panel
+    const panel = document.getElementById('analysisPanel');
+    panel.classList.remove('d-none', 'alert-success', 'alert-warning', 'alert-danger');
+
+    if (a.status === 'success') {
+        panel.classList.add('alert-success');
+        panel.innerHTML = '<i class="ti ti-circle-check me-2"></i> ' +
+            a.message.replace(/\n/g, '<br>');
+    } else if (a.status === 'partial') {
+        panel.classList.add('alert-warning');
+        panel.innerHTML = '<i class="ti ti-alert-triangle me-2"></i> ' +
+            a.message.replace(/\n/g, '<br>');
+    } else {
+        panel.classList.add('alert-danger');
+        panel.innerHTML = '<i class="ti ti-alert-circle me-2"></i> ' +
+            a.message.replace(/\n/g, '<br>');
+    }
+
+    // Pattern descriptions
+    document.getElementById('initialPatternDesc').textContent =
+        p.initial_description || 'Tidak ada initial pattern';
+
+    document.getElementById('repeatPatternDesc').textContent =
+        p.repeat_description || 'Tidak ada repeat pattern';
+
+    // Repeat status badge
+    const badge = document.getElementById('repeatStatusBadge');
+    if (p.repeat_count > 0) {
+        badge.textContent = 'Berulang ' + p.repeat_count + 'x ' +
+            (p.repeat_every_days === 1 ? 'setiap hari' : 'setiap ' + p.repeat_every_days + ' hari');
+    } else {
+        badge.textContent = 'Tidak berulang';
+    }
+
+}
+
+// ==============================
+// PATTERN EDITOR
+// ==============================
+
+function renderPatternEditor() {
+
+    renderInitialPatternEditor();
+    renderRepeatPatternEditor();
+
+}
+
+function renderInitialPatternEditor() {
+
+    const container = document.getElementById('initialPatternDays');
+    container.innerHTML = '';
+
+    if (!importState.initialPattern || importState.initialPattern.length === 0) {
+
+        container.innerHTML = '<div class="col-12 text-secondary py-3 text-center">' +
+            '<i class="ti ti-minus me-1"></i> Tidak ada initial pattern</div>';
+        return;
+    }
+
+    importState.initialPattern.forEach(function(day, dayIdx) {
+
+        const dayCard = createDayEditorCard(day, dayIdx, 'initial');
+        container.appendChild(dayCard);
+
+    });
+
+}
+
+function renderRepeatPatternEditor() {
+
+    const container = document.getElementById('repeatPatternDays');
+    container.innerHTML = '';
+
+    if (!importState.repeatPattern || importState.repeatPattern.length === 0) {
+
+        container.innerHTML = '<div class="col-12 text-secondary py-3 text-center">' +
+            '<i class="ti ti-minus me-1"></i> Tidak ada repeat pattern</div>';
+        return;
+    }
+
+    importState.repeatPattern.forEach(function(day, dayIdx) {
+
+        const dayCard = createDayEditorCard(day, dayIdx, 'repeat');
+        container.appendChild(dayCard);
+
+    });
+
+}
+
+function createDayEditorCard(day, dayIdx, section) {
+
+    const col = document.createElement('div');
+    col.className = 'col-xl-2 col-lg-3 col-md-4 col-sm-6';
+
+    let timesHtml = '';
+    const times = day.times || [];
+
+    if (times.length > 0) {
+
+        times.forEach(function(time, timeIdx) {
+
+            timesHtml +=
+                '<span class="time-badge badge bg-dark text-white me-1 mb-1" ' +
+                'style="cursor:pointer;" ' +
+                'onclick="openTimeEditor(\'' + section + '\', ' + dayIdx + ', ' + timeIdx + ')" ' +
+                'title="Klik untuk mengedit">' +
+                '<i class="ti ti-clock-edit me-1"></i>' +
+                time +
+                '</span>';
+
+        });
+
+    } else {
+
+        timesHtml = '<span class="text-secondary small">(kosong)</span>';
+
+    }
+
+    // Section color
+    const sectionColor = section === 'initial' ? 'warning' : 'success';
+    const sectionLabel = section === 'initial' ? 'Initial' : 'Repeat';
+
+    col.innerHTML =
+        '<div class="card border-' + sectionColor + ' border-opacity-25">' +
+            '<div class="card-body py-2 px-3">' +
+                '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                    '<div class="fw-semibold small text-' + sectionColor + '">' +
+                        'Day ' + day.day +
+                    '</div>' +
+                    '<button type="button" class="btn btn-sm btn-ghost-danger py-0 px-1" ' +
+                    'onclick="addTimeToDay(\'' + section + '\', ' + dayIdx + ')" ' +
+                    'title="Tambah jam">' +
+                        '<i class="ti ti-plus"></i>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="times-container">' + timesHtml + '</div>' +
+            '</div>' +
+        '</div>';
+
+    return col;
+
+}
+
+// ==============================
+// TIME EDITOR
+// ==============================
+
+function openTimeEditor(section, dayIdx, timeIdx) {
+
+    document.getElementById('editTimeSection').value = section;
+    document.getElementById('editTimeDayIdx').value = dayIdx;
+    document.getElementById('editTimeIdx').value = timeIdx;
+
+    const pattern = section === 'initial' ? importState.initialPattern : importState.repeatPattern;
+    const currentTime = pattern[dayIdx].times[timeIdx];
+
+    document.getElementById('editTimeInput').value = currentTime;
+
+    // Show delete button only if there's > 1 time or we allow deletion
+    const btnDelete = document.getElementById('btnDeleteTime');
+    const timesCount = pattern[dayIdx].times.length;
+    if (timesCount <= 1) {
+        btnDelete.style.display = 'none';
+    } else {
+        btnDelete.style.display = '';
+    }
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('timeEditorModal'));
+    modal.show();
+
+}
+
+function saveEditedTime() {
+
+    const section = document.getElementById('editTimeSection').value;
+    const dayIdx = parseInt(document.getElementById('editTimeDayIdx').value);
+    const timeIdx = parseInt(document.getElementById('editTimeIdx').value);
+    const newTime = document.getElementById('editTimeInput').value;
+
+    if (!newTime) {
+        alert('Silakan pilih jam yang valid.');
+        return;
+    }
+
+    const pattern = section === 'initial' ? importState.initialPattern : importState.repeatPattern;
+    pattern[dayIdx].times[timeIdx] = newTime;
+
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('timeEditorModal'));
+    modal.hide();
+
+    // Re-render
+    renderPatternEditor();
+
+}
+
+function deleteEditedTime() {
+
+    const section = document.getElementById('editTimeSection').value;
+    const dayIdx = parseInt(document.getElementById('editTimeDayIdx').value);
+    const timeIdx = parseInt(document.getElementById('editTimeIdx').value);
+
+    const pattern = section === 'initial' ? importState.initialPattern : importState.repeatPattern;
+
+    if (pattern[dayIdx].times.length <= 1) {
+        alert('Setidaknya harus ada 1 jam upload per hari.');
+        return;
+    }
+
+    pattern[dayIdx].times.splice(timeIdx, 1);
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('timeEditorModal'));
+    modal.hide();
+
+    renderPatternEditor();
+
+}
+
+function addTimeToDay(section, dayIdx) {
+
+    const pattern = section === 'initial' ? importState.initialPattern : importState.repeatPattern;
+
+    // Default time: suggest next hour after last time, or 08:00
+    const times = pattern[dayIdx].times;
+    let defaultTime = '08:00';
+    if (times.length > 0) {
+        const lastTime = times[times.length - 1];
+        const parts = lastTime.split(':');
+        let hour = parseInt(parts[0]) + 2;
+        if (hour >= 24) hour = 8;
+        defaultTime = hour.toString().padStart(2, '0') + ':00';
+    }
+
+    times.push(defaultTime);
+
+    renderPatternEditor();
+
+}
+
+function addTimeToCurrentDay() {
+    // This is a placeholder - the actual implementation uses per-day buttons
+    // We'll add time to the first day of repeat pattern as default
+    if (importState.repeatPattern && importState.repeatPattern.length > 0) {
+        addTimeToDay('repeat', 0);
+    } else if (importState.initialPattern && importState.initialPattern.length > 0) {
+        addTimeToDay('initial', 0);
+    } else {
+        alert('Tidak ada pattern untuk ditambahi jam.');
+    }
+}
+
+// ==============================
+// RESET
+// ==============================
+
+function resetToOriginalPattern() {
+
+    if (!importState.originalPattern) {
+        alert('Tidak ada pattern original untuk di-reset.');
+        return;
+    }
+
+    if (!confirm('Reset semua perubahan ke pattern original?')) {
+        return;
+    }
+
+    importState.initialPattern = JSON.parse(JSON.stringify(importState.originalPattern.initial_pattern));
+    importState.repeatPattern = JSON.parse(JSON.stringify(importState.originalPattern.repeat_pattern));
+
+    renderPatternEditor();
+
+}
+
+// ==============================
+// GENERATE
+// ==============================
+
+function generateFromImport() {
+
+    if (!importState.valid || !importState.analyzed) {
+
+        alert('Silakan lakukan analisis pattern terlebih dahulu.');
+        return;
+    }
+
+    const uploadDirectory = document
+        .getElementById('upload_directory')
+        .value
+        .trim();
+
+    if (uploadDirectory === '') {
+
+        alert('Silakan isi Upload Directory.');
+        document.getElementById('upload_directory').focus();
+        return;
+    }
+
+    const startDate = document
+        .getElementById('import_start_date')
+        .value;
+
+    if (!startDate) {
+
+        alert('Silakan pilih Start Date.');
+        document.getElementById('import_start_date').focus();
+        return;
+    }
+
+    // Build the final pattern object from editor state
+    const finalPattern = {
+        type: importState.originalPattern ? importState.originalPattern.type : 'unique',
+        initial_pattern: importState.initialPattern,
+        repeat_pattern: importState.repeatPattern,
+        repeat_every_days: importState.originalPattern ? importState.originalPattern.repeat_every_days : 0,
+        repeat_count: importState.originalPattern ? importState.originalPattern.repeat_count : 0,
+        initial_days: importState.originalPattern ? importState.originalPattern.initial_days : 0,
+        all_times_sorted: importState.allTimes
+    };
+
+    // Cek creator dulu baru submit
+    checkCreatorAndSubmit(function() {
+
+        const formData = new FormData();
+
+        formData.append('schedule_mode', 'import_schedule');
+        formData.append('products', JSON.stringify(selectedProducts));
+        formData.append('upload_directory', document.getElementById('upload_directory').value.trim());
+        formData.append('start_date', startDate);
+        formData.append('import_pattern', JSON.stringify(finalPattern));
+        formData.append('import_times', JSON.stringify(importState.allTimes));
+
+        submitFormWithFetch(formData);
+
+    });
+
+}
+
+// ==============================
+// SET DEFAULT DATE
+// ==============================
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Set default start date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = tomorrow.toISOString().split('T')[0];
+    document.getElementById('import_start_date').value = dateStr;
+
+});
+
+</script>
+
+<style>
+.time-badge {
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+}
+.time-badge:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+.times-container {
+    min-height: 32px;
+}
+</style>

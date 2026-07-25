@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{{ page_title }}</title>
+
+    <!-- TABLER CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css">
+
+    <!-- TABLER ICONS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+
+</head>
+
+<body>
+
+<div class="page">
+
+    <!-- SIDEBAR -->
+    {% include 'includes/sidebar.html' %}
+
+    <!-- CONTENT -->
+    <div class="page-wrapper">
+
+        {% include 'includes/header.html' %}
+
+        <div class="page-body">
+            <div class="container-xl">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        {% include 'includes/footer.html' %}
+
+    </div>
+
+</div>
+
+<!-- TABLER JS -->
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+
+</body>
+</html>

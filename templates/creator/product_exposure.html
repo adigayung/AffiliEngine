@@ -1,0 +1,414 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+{% set data = exposure_data %}
+{% set creator = data.creator %}
+{% set coverage = (data.total_published / data.total_unique_products) if data.total_unique_products > 0 else 0 %}
+{% set coverage_display = "%.2f"|format(coverage) %}
+{% set total_exposure = data.total_published + data.total_scheduled %}
+
+<!-- ============================================================ -->
+<!-- PAGE HEADER                                                    -->
+<!-- ============================================================ -->
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="ti ti-box me-2"></i>
+                Product Exposure
+            </h2>
+            <div class="text-muted mt-1 d-flex align-items-center flex-wrap gap-1">
+                Distribusi seluruh upload berdasarkan produk pada creator ini.
+                <span class="badge bg-green-lt text-green ms-2">Published</span>
+                <span class="badge bg-blue-lt text-blue ms-1">Scheduled</span>
+            </div>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <a href="/creator/{{ creator.id }}/video_performance" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-video me-2"></i>
+                Video Performance
+            </a>
+            <a href="/creator/{{ creator.id }}/report" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-calendar-stats me-2"></i>
+                Lihat Jadwal Upload
+            </a>
+            <a href="/" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-arrow-left me-2"></i>
+                Kembali
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CREATOR INFO + SUMMARY KPI                                    -->
+<!-- ============================================================ -->
+<div class="card card-lg mb-4">
+    <div class="card-body">
+        <div class="row align-items-center g-3">
+
+            <!-- AVATAR -->
+            <div class="col-auto">
+                {% if creator.profile_image %}
+                <span class="avatar avatar-xl" style="background-image: url({{ creator.profile_image }})"></span>
+                {% else %}
+                <span class="avatar avatar-xl bg-dark-lt">
+                    <i class="ti ti-user fs-1"></i>
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- NAMA + USERNAME -->
+            <div class="col-auto flex-grow-1" style="min-width: 0;">
+                <div class="fw-bold fs-4 lh-sm text-nowrap">{{ creator.display_name or creator.username }}</div>
+                <div class="text-muted small text-nowrap">@{{ creator.username }}</div>
+            </div>
+
+            <!-- KPI SUMMARY -->
+            <div class="col-auto flex-shrink-0">
+                <div class="row gx-4 gy-2 align-items-center justify-content-end">
+
+                    <div class="col-auto text-center px-3">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-circle-check text-green"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Published</span>
+                        </div>
+                        <div class="fw-bold fs-3 text-green">{{ data.total_published }}</div>
+                    </div>
+
+                    <div class="col-auto text-center px-3 border-start">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-calendar-time text-blue"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Scheduled</span>
+                        </div>
+                        <div class="fw-bold fs-3 text-blue">{{ data.total_scheduled }}</div>
+                    </div>
+
+                    <div class="col-auto text-center px-3 border-start">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-box text-muted"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Total Produk</span>
+                        </div>
+                        <div class="fw-bold fs-3">{{ data.total_unique_products }}</div>
+                    </div>
+
+                    <div class="col-auto text-center px-3 border-start">
+                        <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+                            <i class="ti ti-arrows-right-left text-muted"></i>
+                            <span class="text-muted extra-small text-uppercase tracking-wider">Coverage</span>
+                        </div>
+                        <div class="fw-bold fs-3">{{ coverage_display }}</div>
+                        <div class="text-muted extra-small" style="margin-top: -2px;">upload / produk</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SEARCH & FILTER BAR                                           -->
+<!-- ============================================================ -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <form method="GET" action="/creator/{{ creator.id }}/product-exposure" class="d-flex">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="ti ti-search"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="search"
+                            placeholder="Cari nama produk..."
+                            value="{{ search_query }}"
+                            autocomplete="off">
+                        {% if search_query %}
+                        <a href="/creator/{{ creator.id }}/product-exposure" class="btn btn-ghost-secondary" title="Hapus filter">
+                            <i class="ti ti-x"></i>
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">
+                            Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-6 text-md-end text-muted small d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                <span>{{ data.total_unique_products }} produk ditemukan</span>
+                {% if search_query %}
+                <span class="text-secondary">&middot; filter: "{{ search_query }}"</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PRODUCT EXPOSURE TABLE                                        -->
+<!-- ============================================================ -->
+{% if data.products %}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table table-hover align-middle mb-0" id="exposure-table">
+            <thead>
+                <tr>
+                    <th width="40" class="text-center ps-3">#</th>
+                    <th width="52" class="text-center">Foto</th>
+                    <th class="text-nowrap" style="min-width: 150px;">Nama Produk</th>
+                    <th width="96" class="text-center text-nowrap">Published</th>
+                    <th width="96" class="text-center text-nowrap">Scheduled</th>
+                    <th width="120" class="text-center text-nowrap">Total Exposure</th>
+                    <th width="110" class="text-center text-nowrap">Persentase</th>
+                    <th width="130" class="text-nowrap">First Published</th>
+                    <th width="130" class="text-nowrap pe-3">Last Published</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in data.products %}
+                {% set is_top = (loop.index == 1 and product.published_count > 0) %}
+                <tr class="{{ 'table-top-product' if is_top }}">
+                    <td class="text-center ps-3">
+                        {% if is_top %}
+                        <span class="badge bg-warning-lt text-warning" style="font-size: 0.65rem; padding: 0.1rem 0.3rem; font-weight: 600;">
+                            TOP
+                        </span>
+                        {% else %}
+                        <span class="text-muted">{{ loop.index }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="avatar avatar-sm exposure-thumb">
+                            <img src="{{ product.thumbnail }}"
+                                 alt="{{ product.product_name }}"
+                                 loading="lazy"
+                                 onerror="this.remove(); this.parentElement.innerHTML='<i class=\'ti ti-box fs-5 text-muted\'></i>'">
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/product/{{ product.product_id }}" target="_blank"
+                           class="text-reset text-decoration-none fw-medium d-block text-truncate product-name-link"
+                           style="max-width: 260px;"
+                           title="{{ product.product_name }}">
+                            {{ product.product_name }}
+                        </a>
+                    </td>
+                    <td class="text-center text-green fw-bold fs-5">{{ product.published_count if product.published_count > 0 else '0' }}</td>
+                    <td class="text-center text-blue fw-medium">{{ product.scheduled_count if product.scheduled_count > 0 else '0' }}</td>
+                    <td class="text-center fw-medium">{{ product.total }}</td>
+                    <td class="text-center fw-medium">{{ product.percentage ~ '%' if product.published_count > 0 else '-' }}</td>
+                    <td class="text-nowrap text-muted small">
+                        {% if product.first_published_formatted != '-' %}
+                        <i class="ti ti-calendar-entry me-1"></i>
+                        {% endif %}
+                        {{ product.first_published_formatted }}
+                    </td>
+                    <td class="text-nowrap text-muted small pe-3">
+                        {% if product.last_published_formatted != '-' %}
+                        <i class="ti ti-calendar-time me-1"></i>
+                        {% endif %}
+                        {{ product.last_published_formatted }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="text-center ps-3"></td>
+                    <td></td>
+                    <td class="fw-semibold text-uppercase small">Total</td>
+                    <td class="text-center fw-bold fs-5 text-green">{{ data.total_published }}</td>
+                    <td class="text-center fw-medium text-blue">{{ data.total_scheduled }}</td>
+                    <td class="text-center fw-bold fs-5">{{ total_exposure }}</td>
+                    <td class="text-center fw-medium">100%</td>
+                    <td colspan="2" class="pe-3"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- EMPTY STATE                                                   -->
+<!-- ============================================================ -->
+{% else %}
+
+<div class="card">
+    <div class="card-body text-center py-6">
+        <div class="mb-3">
+            {% if search_query %}
+            <i class="ti ti-search-off text-muted" style="font-size: 2.5rem;"></i>
+            {% else %}
+            <i class="ti ti-box-off text-muted" style="font-size: 2.5rem;"></i>
+            {% endif %}
+        </div>
+        <h4 class="text-muted">
+            {% if search_query %}
+            Tidak ditemukan produk yang sesuai.
+            {% else %}
+            Creator ini belum memiliki histori Product Exposure.
+            {% endif %}
+        </h4>
+        <p class="text-secondary mb-4">
+            {% if search_query %}
+            Coba gunakan kata kunci lain atau <a href="/creator/{{ creator.id }}/product-exposure" class="text-decoration-underline">tampilkan semua produk</a>.
+            {% else %}
+            Belum ada data produk yang pernah diupload oleh <strong>{{ creator.display_name or creator.username }}</strong>.
+            {% endif %}
+        </p>
+        {% if not search_query %}
+        <a href="/creator/{{ creator.id }}/report" class="btn btn-outline-primary">
+            <i class="ti ti-calendar-stats me-2"></i>
+            Lihat Jadwal Upload
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ============================================================ -->
+<!-- CUSTOM STYLES                                                 -->
+<!-- ============================================================ -->
+<style>
+/* --- Utility --- */
+.extra-small {
+    font-size: 0.65rem;
+    line-height: 1.2;
+}
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+/* --- Table base --- */
+#exposure-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* --- Sticky header (via scroll container parent) --- */
+#exposure-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+#exposure-table thead tr {
+    position: relative;
+}
+#exposure-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8fafc;
+    border-bottom: 2px solid #dce1e7;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: #656d77;
+    white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(0,0,0,0.04), inset 0 -1px 0 rgba(0,0,0,0.04);
+}
+
+/* --- Body rows --- */
+#exposure-table tbody tr {
+    transition: background-color 0.12s ease;
+}
+#exposure-table tbody tr:hover {
+    background-color: rgba(32, 107, 196, 0.04);
+}
+
+/* --- Top product highlight --- */
+#exposure-table tbody tr.table-top-product {
+    background-color: rgba(255, 193, 7, 0.04);
+}
+#exposure-table tbody tr.table-top-product:hover {
+    background-color: rgba(255, 193, 7, 0.08);
+}
+
+/* --- Table footer --- */
+#exposure-table tfoot tr {
+    border-top: 2px solid #dce1e7;
+}
+#exposure-table tfoot td {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    background-color: #f8fafc;
+    font-size: 0.85rem;
+    border-bottom: none;
+}
+
+/* --- Typography & alignment --- */
+#exposure-table td:nth-child(4),
+#exposure-table td:nth-child(5),
+#exposure-table td:nth-child(6),
+#exposure-table td:nth-child(7) {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+#exposure-table thead th:nth-child(4),
+#exposure-table thead th:nth-child(5),
+#exposure-table thead th:nth-child(6),
+#exposure-table thead th:nth-child(7) {
+    text-align: right;
+}
+
+/* Thumbnail container: prevent layout shift on error */
+.exposure-thumb {
+    min-width: 28px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.exposure-thumb i {
+    line-height: 1;
+}
+
+/* Product name link */
+.product-name-link {
+    line-height: 1.3;
+}
+
+/* Date cells: preserve nowrap */
+#exposure-table td:nth-child(8),
+#exposure-table td:nth-child(9) {
+    white-space: nowrap;
+}
+
+/* --- Responsive --- */
+@media (max-width: 992px) {
+    .text-nowrap {
+        white-space: normal !important;
+    }
+    #exposure-table thead th {
+        white-space: nowrap !important;
+    }
+}
+</style>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS                                                       -->
+<!-- ============================================================ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tooltip initialization
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function(el) {
+        new bootstrap.Tooltip(el, {
+            boundary: 'window',
+            placement: 'top'
+        });
+    });
+});
+</script>
+
+{% endblock %}

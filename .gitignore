@@ -1,0 +1,30 @@
+# Mengabaikan semua gambar JPG dan PNG
+*.jpg
+*.jpeg
+*.png
+*.JPG
+*.PNG
+*.ZIP
+*.BAT
+openrouter.json
+
+# Mengabaikan environment / folder Conda
+.conda/
+.git/
+app/
+chromium/
+.continue/
+conda/
+env/
+venv/
+*.conda
+
+# Python cache & temporary files
+__pycache__/
+temp/
+upload/
+downloaded_files/
+*.py[cod]
+.env
+.vscode/
+.idea/

@@ -1,0 +1,73 @@
+<form method="POST" action="/setting/ai/save">
+
+<!-- BASE CONFIG -->
+<div class="mb-3">
+    <label class="form-label">Base URL</label>
+    <input type="text" class="form-control" name="base_url" id="base_url">
+</div>
+
+<div class="mb-3">
+    <label class="form-label">API Key</label>
+    <input type="text" class="form-control" name="api_key" id="api_key">
+</div>
+
+<hr>
+
+<!-- IMAGE MODEL -->
+<div class="mb-3">
+    <label class="form-label">Image Analysis Model</label>
+    <select class="form-select" name="image_model" id="image_model">
+        <option value="google/gemma-3-27b-it">google/gemma-3-27b-it</option>
+        <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+        <option value="openai/gpt-4o">openai/gpt-4o</option>
+        <option value="anthropic/claude-3-opus">anthropic/claude-3-opus</option>
+    </select>
+</div>
+
+<!-- TEXT MODEL -->
+<div class="mb-3">
+    <label class="form-label">Text Analysis Model</label>
+    <select class="form-select" name="text_model" id="text_model">
+        <option value="google/gemma-3-27b-it">google/gemma-3-27b-it</option>
+        <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+        <option value="openai/gpt-4o">openai/gpt-4o</option>
+        <option value="anthropic/claude-3-opus">anthropic/claude-3-opus</option>
+    </select>
+</div>
+
+<hr>
+
+<button class="btn btn-primary" type="submit">
+    Save AI Settings
+</button>
+
+</form>
+
+<script>
+
+async function loadAIConfig() {
+
+    try {
+        const res = await fetch("/setting/ai/config");
+        const data = await res.json();
+
+        // BASE
+        document.getElementById("base_url").value = data.base_url || "";
+        document.getElementById("api_key").value = data.api_key || "";
+
+        // MODELS
+        document.getElementById("image_model").value =
+            data.models?.image_analysis || "openai/gpt-4o-mini";
+
+        document.getElementById("text_model").value =
+            data.models?.text_analysis || "openai/gpt-4o-mini";
+
+    } catch (err) {
+        console.error("Failed to load AI config:", err);
+    }
+}
+
+// run on page load
+document.addEventListener("DOMContentLoaded", loadAIConfig);
+
+</script>

@@ -1,0 +1,40 @@
+enchan image :
+---------------
+Enhance this image to full HD / 4K resolution with maximum clarity and detail. Remove blur, noise, and compression artifacts. Sharpen edges and restore fine textures while preserving the original structure.
+Keep everything exactly the same: no changes to composition, colors, objects, or layout.
+Improve lighting balance, contrast, and dynamic range naturally without overexposure.
+Ultra realistic, sharp focus, high detail, clean image, natural textures, no distortion, no artificial look.
+This is a restoration and upscale, not a redesign.
+
+
+flip image:
+-----------
+Flip the image horizontally (mirror flip). Reverse the left-right orientation.
+
+If the subject is facing right, make it face left.  
+If the subject is facing left, make it face right.
+
+Do not change anything else. Preserve all details, proportions, lighting, and composition exactly the same.
+
+
+anime char to realistic:
+------------------------
+use reference image 1 (anime female character) as the base, strictly preserve the exact hairstyle, outfit design, colors, accessories, and body proportions, do not redesign, do not modify, do not deviate, maintain 1:1 accuracy from the reference
+
+convert the character into ultra realistic human version, realistic adaptation while keeping all original visual elements consistent
+
+full body shot, A-pose standing, symmetrical posture, arms slightly away from body, neutral stance, centered composition
+
+face adapted into realistic human face while maintaining the original character’s facial structure and identity, flat expression, no emotion, no smile, straight gaze
+
+realistic skin texture, natural skin tone, clean facial structure, proportional anatomy
+
+outfit must match the reference exactly, including fabric shapes, patterns, layers, and accessories, with realistic materials, fabric texture, stitching, and physical behavior
+
+hair must match the reference exactly in style, length, and structure, adapted into realistic hair strands
+
+white background, simple studio background, minimal, no distractions
+
+soft studio lighting, even lighting, natural shadows, balanced exposure
+
+high detail, sharp focus, photorealistic, 8k, professional photography

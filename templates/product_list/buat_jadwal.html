@@ -1,0 +1,258 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+
+<div class="page-body">
+
+    <div class="container-xl">
+
+        <div class="card">
+
+            <div class="card-header">
+
+                <h3 class="card-title">
+
+                    Upload Schedule
+
+                </h3>
+
+            </div>
+
+            <div class="card-body">
+
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-3">
+
+                    <div class="card bg-primary-lt">
+
+                        <div class="card-body text-center">
+
+                            <div class="text-secondary">
+
+                                Total Schedule
+
+                            </div>
+
+                            <div class="display-6 fw-bold">
+
+                                {{ created_folders|length }}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="card bg-orange-lt">
+
+                        <div class="card-body text-center">
+
+                            <div class="text-secondary">
+
+                                Finish In
+
+                            </div>
+
+                            <div class="fw-bold fs-2">
+
+                                {{ duration_text }}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <table class="table table-sm table-borderless mb-0">
+
+                        <tr>
+
+                            <td width="180">
+
+                                Upload Directory
+
+                            </td>
+
+                            <td>
+
+                                {{ upload_directory }}
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td>
+
+                                Start
+
+                            </td>
+
+                            <td>
+
+                                {{ start_date }} {{ start_time }}
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td>
+
+                                Interval
+
+                            </td>
+
+                            <td>
+
+                                {{ interval_hour }} Hour
+
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+                <div class="table-responsive">
+
+                    <table class="table table-vcenter table-hover align-middle">
+
+                        <thead>
+
+                            <tr>
+
+                                <th style="width:110px">
+
+                                    Product
+
+                                </th>
+
+                                <th style="width:170px">
+
+                                    Upload Time
+
+                                </th>
+
+                                <th>
+
+                                    Folder
+
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for item in created_folders %}
+
+                            <tr>
+
+                                <td>
+
+                                    <div class="d-flex flex-column align-items-center">
+
+                                        <div
+                                            class="rounded border"
+                                            style="
+                                                width:72px;
+                                                height:72px;
+                                                background-image:url('{{ url_for('static', filename='products/' ~ item.product_id ~ '/product/1.jpg') }}');
+                                                background-size:cover;
+                                                background-position:center;
+                                                background-repeat:no-repeat;">
+
+                                        </div>
+
+                                        <div
+                                            class="text-secondary text-center mt-2"
+                                            style="
+                                                font-size:10px;
+                                                line-height:1.2;
+                                                word-break:break-all;">
+
+                                            {{ item.product_id }}
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+                                <td>
+
+                                    <div class="fw-semibold">
+
+                                        {{ item.datetime.strftime("%d %b %Y") }}
+
+                                    </div>
+
+                                    <div class="text-secondary">
+
+                                        {{ item.datetime.strftime("%H:%M") }}
+
+                                    </div>
+
+                                </td>
+
+                                <td>
+
+                                    <code>{{ item.folder }}</code>
+
+                                </td>
+
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <div class="card-footer d-flex justify-content-end">
+
+                <a
+                    href="javascript:history.back()"
+                    class="btn btn-secondary me-2">
+
+                    Back
+
+                </a>
+
+                <button
+                    type="button"
+                    class="btn btn-primary">
+
+                    Save Schedule
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

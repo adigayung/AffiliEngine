@@ -1,0 +1,96 @@
+<div class="card mt-3">
+    <div class="card-header">
+        <h3 class="card-title">
+            Product Information
+        </h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-vcenter table-striped">
+
+            <tbody>
+
+                <tr>
+                    <th width="220">TikTok Product ID</th>
+                    <td>{{ text.tiktok_id_product }}</td>
+                </tr>
+
+                <tr>
+                    <th>Title</th>
+                    <td>{{ text.title }}</td>
+                </tr>
+
+                <tr>
+                    <th>Description</th>
+                    <td style="white-space: pre-wrap;">{{ text.description }}</td>
+                </tr>
+
+                <tr>
+                    <th>Price</th>
+                    <td>Rp {{ "{:,.0f}".format(text.price).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>Rating</th>
+                    <td>{{ text.rating }}</td>
+                </tr>
+
+                <tr>
+                    <th>Vote</th>
+                    <td>{{ "{:,}".format(text.vote).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>Sold</th>
+                    <td>{{ "{:,}".format(text.sold).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>Commission</th>
+                    <td>Rp. {{ text.komisi }}</td>
+                </tr>
+
+                <tr>
+                    <th>Available Stock</th>
+                    <td>{{ "{:,}".format(text.stok_tersedia).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>Positive Reviews</th>
+                    <td>{{ text.ulasan_positif }} %</td>
+                </tr>
+
+                <tr>
+                    <th>Orders</th>
+                    <td>{{ "{:,}".format(text.pesanan).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>CTR</th>
+                    <td>{{ text.ctr }} %</td>
+                </tr>
+
+                <tr>
+                    <th>Creators</th>
+                    <td>{{ "{:,}".format(text.jumlah_kreator).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>Add to Cart</th>
+                    <td>{{ "{:,}".format(text.pembeli_keranjang).replace(",", ".") }}</td>
+                </tr>
+
+                <tr>
+                    <th>Product Link</th>
+                    <td>
+                        <a href="{{ text.product_link }}" target="_blank">
+                            {{ text.product_link }}
+                        </a>
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+</div>

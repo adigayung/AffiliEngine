@@ -1,0 +1,76 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="page-header d-print-none mb-3">
+    <div class="container-xl">
+
+        <div class="row g-2 align-items-center">
+
+            <div class="col">
+
+                <h2 class="page-title">
+                    Prepare Upload
+                </h2>
+
+                <div class="text-secondary">
+                    Prepare product assets before upload.
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<div class="container-xl">
+
+    <div class="card">
+
+        <div class="card-header">
+            <h3 class="card-title">
+                Upload Preparation
+            </h3>
+        </div>
+
+        <div class="card-body">
+
+            <form method="POST">
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Product Folder Path
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        name="path"
+                        placeholder="D:\TikTok\Product\12345"
+                        autocomplete="off"
+                    >
+
+                    <div class="form-hint">
+                        Enter the folder containing product images and data.
+                    </div>
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Prepare
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

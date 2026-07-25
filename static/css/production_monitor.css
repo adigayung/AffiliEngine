@@ -1,0 +1,118 @@
+/* File: static/css/production_monitor.css */
+/* Styles khusus untuk modul Monitor Produksi */
+
+/* --- Hero Card --- */
+.card-lg .avatar-lg {
+    width: 64px;
+    height: 64px;
+}
+
+/* Border accent colors for hero card */
+.border-green {
+    border-left: 4px solid #2fb344 !important;
+}
+
+/* --- Task List --- */
+.list-group-item {
+    border-left: none;
+    border-right: none;
+    transition: background-color 0.15s ease;
+}
+.list-group-item:hover {
+    background-color: rgba(0, 0, 0, 0.01);
+}
+.list-group-item:first-child {
+    border-top: none;
+}
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+/* Tombol aksi disabled — tetap terlihat rapi */
+.btn-outline-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- Creator Cards --- */
+.card-sm {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Progress bar animation */
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Badge consistency */
+.badge.bg-red {
+    background-color: #d63939 !important;
+}
+.badge.bg-orange {
+    background-color: #f76707 !important;
+}
+.badge.bg-blue {
+    background-color: #206bc4 !important;
+}
+.badge.bg-green {
+    background-color: #2fb344 !important;
+}
+
+/* Summary number colors */
+.h1.text-danger {
+    color: #d63939 !important;
+}
+.h1.text-warning {
+    color: #f76707 !important;
+}
+.text-orange {
+    color: #f76707 !important;
+}
+
+/* Table alignment */
+.table-vcenter td {
+    vertical-align: middle;
+}
+
+/* Timeline mini */
+.timeline-mini hr {
+    border: none;
+    border-top: 2px dashed #d4d4d8;
+    margin: 0;
+}
+.timeline-mini .rounded-circle {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Background tints for task icons */
+.bg-warning-lt {
+    background-color: rgba(247, 103, 7, 0.1) !important;
+}
+.bg-danger-lt {
+    background-color: rgba(214, 57, 57, 0.1) !important;
+}
+.bg-blue-lt {
+    background-color: rgba(32, 107, 196, 0.1) !important;
+}
+
+/* Tracking wider for labels */
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-sm .h3, .card-sm .h4 {
+        font-size: 1.1rem;
+    }
+    .timeline-mini .small {
+        font-size: 0.65rem;
+    }
+    .card-lg .h2 {
+        font-size: 1.3rem;
+    }
+}
