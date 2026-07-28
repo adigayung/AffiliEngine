@@ -275,8 +275,13 @@ class VideoAnalyticsService:
                             v.match_score,
                             v.match_method,
                             v.matched_at,
-                            v.upload_job_id
+                            v.upload_job_id,
+                            uj.product_id AS upload_product_id,
+                            tp.title AS product_title,
+                            tp.tiktok_id_product AS product_tiktok_id
                         FROM tiktok_videos v
+                        LEFT JOIN upload_jobs uj ON v.upload_job_id = uj.id
+                        LEFT JOIN tiktok_products tp ON uj.product_id = tp.id
                         WHERE v.creator_id = %s
                         ORDER BY v.upload_time DESC
                     """, (creator_id,))
@@ -442,6 +447,9 @@ class VideoAnalyticsService:
                             "match_score": row["match_score"],
                             "match_method": row["match_method"],
                             "upload_job_id": row["upload_job_id"],
+                            "product_id": row.get("upload_product_id"),
+                            "product_name": row.get("product_title"),
+                            "product_tiktok_id": row.get("product_tiktok_id"),
                         })
 
                     # ==============================
@@ -474,6 +482,128 @@ class VideoAnalyticsService:
         except Exception as e:
             logger(ERROR, f"{LOG_PREFIX} ERROR membaca analytics: {e}")
             return self._empty_analytics()
+
+    def get_rising_videos(self, creator_id: int) -> list:
+        """
+        Analisis video dengan pertumbuhan views tercepat dalam 3 hari terakhir.
+
+        Konsep:
+        - Ambil histori views 7 hari terakhir untuk setiap video
+        - Hitung daily growth untuk 3 hari terakhir
+        - Rising Score = (growth_h1 * 0.5) + (growth_h2 * 0.3) + (growth_h3 * 0.2)
+        - Ranking: TOP 7 video dengan skor tertinggi
+
+        Returns:
+            list[dict]: Top 7 rising videos dengan data:
+                - video_id, caption, thumbnail
+                - views_history: list of {date, views} (7 hari)
+                - growth_3_days: total growth 3 hari terakhir
+                - rising_score: weighted score
+                - product_id, product_name
+        """
+        from datetime import datetime, timedelta
+
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
+                    # Ambil video creator + product info
+                    cursor.execute("""
+                        SELECT
+                            v.id AS video_pk,
+                            v.video_id,
+                            v.caption,
+                            uj.product_id,
+                            tp.title AS product_name
+                        FROM tiktok_videos v
+                        LEFT JOIN upload_jobs uj ON v.video_id = uj.video_id
+                        LEFT JOIN tiktok_products tp ON uj.product_id = tp.id
+                        WHERE v.creator_id = %s
+                        ORDER BY v.upload_time DESC
+                    """, (creator_id,))
+                    video_rows = cursor.fetchall()
+
+                    if not video_rows:
+                        return []
+
+                    # Ambil histori views 7 hari terakhir untuk semua video
+                    video_pks = [r["video_pk"] for r in video_rows]
+                    placeholders = ",".join(["%s"] * len(video_pks))
+
+                    cursor.execute(f"""
+                        SELECT
+                            s.video_id,
+                            DATE(s.snapshot_time) AS stat_date,
+                            s.views
+                        FROM tiktok_video_stats s
+                        WHERE s.video_id IN ({placeholders})
+                          AND s.snapshot_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                        ORDER BY s.video_id, s.snapshot_time ASC
+                    """, video_pks)
+                    stats_rows = cursor.fetchall()
+
+                    # Group stats by video_pk
+                    stats_map = {}
+                    for s in stats_rows:
+                        vid = int(s["video_id"])
+                        if vid not in stats_map:
+                            stats_map[vid] = []
+                        stats_map[vid].append({
+                            "date": s["stat_date"].strftime("%Y-%m-%d") if hasattr(s["stat_date"], "strftime") else str(s["stat_date"]),
+                            "views": s["views"] or 0,
+                        })
+
+                    # Build result
+                    all_videos = []
+                    for row in video_rows:
+                        video_pk = row["video_pk"]
+                        history = stats_map.get(video_pk, [])
+
+                        if len(history) < 4:
+                            continue  # skip jika data histori tidak mencukupi
+
+                        # Urutkan berdasarkan tanggal
+                        history.sort(key=lambda x: x["date"])
+
+                        # Hitung daily growth untuk 3 hari terakhir
+                        # growth_1 = hari_ini - kemarin (weight 0.5)
+                        # growth_2 = kemarin - 2_hari_lalu (weight 0.3)
+                        # growth_3 = 2_hari_lalu - 3_hari_lalu (weight 0.2)
+                        growth_1 = history[-1]["views"] - history[-2]["views"]
+                        growth_2 = history[-2]["views"] - history[-3]["views"]
+                        growth_3 = history[-3]["views"] - history[-4]["views"]
+
+                        rising_score = (growth_1 * 0.5) + (growth_2 * 0.3) + (growth_3 * 0.2)
+                        growth_3_days = growth_1 + growth_2 + growth_3
+
+                        # Hanya tampilkan video dengan skor positif (lagi naik)
+                        if rising_score <= 0 and growth_3_days <= 0:
+                            continue
+
+                        product_id = row.get("product_id")
+                        product_name = row.get("product_name") or "No Product"
+
+                        all_videos.append({
+                            "video_id": row["video_id"],
+                            "caption": row["caption"] or "",
+                            "thumbnail": f"/static/videos/{row['video_id']}/thumbnail.jpg",
+                            "views_history": history,
+                            "growth_3_days": growth_3_days,
+                            "rising_score": round(rising_score, 2),
+                            "product_id": product_id,
+                            "product_name": product_name,
+                        })
+
+                    # Urutkan berdasarkan rising_score DESC, ambil TOP 7
+                    all_videos.sort(key=lambda x: x["rising_score"], reverse=True)
+                    return all_videos[:7]
+
+            finally:
+                conn.close()
+
+        except Exception as e:
+            logger(ERROR, f"{LOG_PREFIX} ERROR get_rising_videos: {e}")
+            return []
 
     def _empty_analytics(self) -> dict:
         """

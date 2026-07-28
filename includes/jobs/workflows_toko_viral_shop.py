@@ -158,8 +158,8 @@ jobs_json = [
     "keterangan": "mengisi deskripsi tiktok",
     "data": {
         "target": {
-            "type": "id",
-            "value": "com.ss.android.ugc.trill:id/gug"
+            "type": "class",
+            "value": "android.widget.EditText"
         },
         "text": "mengisi deskripsi tiktok"
     }
@@ -373,14 +373,14 @@ jobs_json = [
 {
     "id": 25,
     "cmd": "click",
-    "delay": 800,
+    "delay": 1800,
     "status": "pending",
     "keterangan": "klik 'Jadwalkan posting'",
     "data": {
         "target": {
             "type": "point",
-            "x": 306,
-            "y": 1596
+            "x": 346,
+            "y": 1713
         }
     }
 },

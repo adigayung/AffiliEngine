@@ -1475,3 +1475,136 @@ def get_creator_username(creator_id):
         return None
     finally:
         conn.close()
+
+
+# =============================================================================
+# VIDEO JOB MATCHER
+# =============================================================================
+
+MATCH_TOLERANCE_SECOND = 120
+
+
+def match_tiktok_videos_to_jobs():
+    """
+    Match antara tiktok_videos (yang belum punya upload_job_id) dengan
+    upload_jobs (status='uploaded', video_id IS NULL, schedule_datetime <= NOW()).
+
+    Kriteria matching:
+      - creator_id sama
+      - selisih antara upload_time dan schedule_datetime <= 120 detik
+
+    Update jika cocok:
+      - tiktok_videos.upload_job_id = upload_jobs.id (hanya jika NULL)
+      - upload_jobs.video_id = tiktok_videos.video_id (hanya jika NULL)
+
+    Log:
+      - [MATCH VIDEO] job=xxx video=xxx diff=xxs  (ketika match ditemukan)
+      - [MATCH VIDEO] Tidak ada data  (ketika tidak ada match)
+
+    Returns:
+        int: Jumlah pasangan yang berhasil di-match
+    """
+    conn = None
+    try:
+        conn = get_connection()
+
+        with conn.cursor() as cursor:
+            sql = """
+            SELECT
+                tv.id AS video_row_id,
+                tv.video_id,
+                tv.creator_id,
+                tv.upload_time,
+                uj.id AS job_id,
+                uj.schedule_datetime,
+                ABS(
+                    TIMESTAMPDIFF(
+                        SECOND,
+                        uj.schedule_datetime,
+                        tv.upload_time
+                    )
+                ) AS diff_second
+
+            FROM tiktok_videos tv
+
+            JOIN upload_jobs uj
+                ON tv.creator_id = uj.creator_id
+
+            WHERE
+                tv.upload_job_id IS NULL
+                AND uj.video_id IS NULL
+                AND uj.status = 'uploaded'
+                AND uj.schedule_datetime <= NOW()
+
+            HAVING diff_second <= %s
+
+            ORDER BY diff_second ASC
+            """
+
+            cursor.execute(
+                sql,
+                (MATCH_TOLERANCE_SECOND,)
+            )
+
+            matches = cursor.fetchall()
+
+            if not matches:
+                print(
+                    "[MATCH VIDEO] Tidak ada data"
+                )
+                return 0
+
+            total = 0
+
+            for row in matches:
+                video_row_id = row["video_row_id"]
+                video_id = row["video_id"]
+                job_id = row["job_id"]
+
+                # isi tiktok_videos (hanya jika upload_job_id masih NULL)
+                cursor.execute(
+                    """
+                    UPDATE tiktok_videos
+                    SET upload_job_id=%s
+                    WHERE id=%s
+                    AND upload_job_id IS NULL
+                    """,
+                    (job_id, video_row_id)
+                )
+
+                # isi upload_jobs (hanya jika video_id masih NULL)
+                cursor.execute(
+                    """
+                    UPDATE upload_jobs
+                    SET video_id=%s
+                    WHERE id=%s
+                    AND video_id IS NULL
+                    """,
+                    (video_id, job_id)
+                )
+
+                total += 1
+
+                print(
+                    f"[MATCH VIDEO] "
+                    f"job={job_id} "
+                    f"video={video_id} "
+                    f"diff={row['diff_second']}s"
+                )
+            conn.commit()
+            return total
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print("[MATCH VIDEO ERROR]", e)
+        return 0
+
+    finally:
+        if conn:
+            conn.close()
+
+
+# =============================================================================
+# BACKWARD COMPATIBILITY - Fungsi lama (masih dipanggil oleh matching engine)
+# =============================================================================

@@ -11,6 +11,7 @@ openrouter.json
 # Mengabaikan environment / folder Conda
 .conda/
 .git/
+debug/
 app/
 chromium/
 .continue/

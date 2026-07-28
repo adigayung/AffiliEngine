@@ -362,8 +362,8 @@ jobs_json = [
     "data": {
         "target": {
             "type": "point",
-            "x": 306,
-            "y": 1596
+            "x": 346,
+            "y": 1713
         }
     }
 },
