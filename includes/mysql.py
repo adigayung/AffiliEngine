@@ -1367,6 +1367,175 @@ def get_video_performance_list(creator_id):
 
 
 # =============================================================================
+# PRODUCT MOMENTUM - Data Collection
+# =============================================================================
+# Mengumpulkan data untuk analisis Product Momentum.
+#
+# Relasi:
+#   tiktok_video_stats.video_id -> tiktok_videos.id
+#   tiktok_videos.upload_job_id -> upload_jobs.id
+#   upload_jobs.product_id -> tiktok_products.id
+#   tiktok_videos.creator_id -> creators.id
+# =============================================================================
+
+
+def get_product_momentum_data():
+    """
+    Mengambil data video beserta product, creator, dan daily views
+    untuk analisis Product Momentum.
+
+    Query mengumpulkan daily views per video yang sudah ter-link ke produk
+    (via upload_jobs). Data dikembalikan dalam format yang siap diolah
+    oleh ProductMomentumAnalyzer.
+
+    Returns:
+        list[dict]: Daftar data per produk-video-creator dengan daily_views.
+            Setiap item memiliki struktur:
+            {
+                "product_name": str,
+                "product_id": int or None,
+                "video_id": str,
+                "creator_name": str,
+                "daily_views": list[int],
+                "last_scan": datetime or None,
+            }
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Ambil semua video yang memiliki relasi ke produk
+            # via upload_jobs (upload_job_id tidak NULL dan product_id terisi)
+            sql = """
+                SELECT
+                    p.id AS product_id,
+                    p.title AS product_name,
+                    v.id AS video_pk,
+                    v.video_id,
+                    v.last_scan,
+                    c.username AS creator_name,
+                    s.views,
+                    DATE(s.snapshot_time) AS scan_date
+                FROM tiktok_video_stats s
+                INNER JOIN tiktok_videos v ON s.video_id = v.id
+                INNER JOIN upload_jobs uj ON v.upload_job_id = uj.id
+                INNER JOIN tiktok_products p ON uj.product_id = p.id
+                LEFT JOIN creators c ON v.creator_id = c.id
+                WHERE p.title IS NOT NULL AND p.title != ''
+                  AND uj.product_id IS NOT NULL
+                ORDER BY p.id, v.id, s.snapshot_time ASC
+            """
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+            # Kelompokkan: { (product_name, video_id, creator_name): [(date, views)] }
+            grouped = {}
+            for row in rows:
+                key = (
+                    row["product_name"],
+                    row["video_id"],
+                    row["creator_name"] or "Unknown",
+                )
+                if key not in grouped:
+                    grouped[key] = {
+                        "product_name": row["product_name"],
+                        "product_id": row["product_id"],
+                        "video_id": row["video_id"],
+                        "creator_name": row["creator_name"] or "Unknown",
+                        "views_by_date": [],
+                        "last_scan": row["last_scan"],
+                    }
+                grouped[key]["views_by_date"].append((
+                    row["scan_date"],
+                    row["views"] or 0,
+                ))
+                # Update last_scan
+                if row["last_scan"] and (
+                    not grouped[key]["last_scan"]
+                    or row["last_scan"] > grouped[key]["last_scan"]
+                ):
+                    grouped[key]["last_scan"] = row["last_scan"]
+
+            # Konversi ke list: daily_views = [views for each date, ordered]
+            result = []
+            for key, data in grouped.items():
+                # Urutkan berdasarkan tanggal
+                sorted_views = sorted(data["views_by_date"], key=lambda x: x[0])
+                daily_views = [v[1] for v in sorted_views]
+
+                if len(daily_views) >= 2:  # Minimal 2 data points
+                    result.append({
+                        "product_name": data["product_name"],
+                        "product_id": data["product_id"],
+                        "video_id": data["video_id"],
+                        "creator_name": data["creator_name"],
+                        "daily_views": daily_views,
+                        "last_scan": data["last_scan"],
+                    })
+
+            return result
+
+    except Exception as e:
+        print(f"get_product_momentum_data() error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def get_product_momentum_summary_stats():
+    """
+    Mengambil statistik ringkasan untuk dashboard Product Momentum.
+
+    Returns:
+        dict: {
+            "total_products": int,
+            "total_videos": int,
+            "total_creators": int,
+        }
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Total produk yang memiliki video matched
+            cursor.execute("""
+                SELECT COUNT(DISTINCT uj.product_id) AS total
+                FROM tiktok_videos v
+                INNER JOIN upload_jobs uj ON v.upload_job_id = uj.id
+                WHERE uj.product_id IS NOT NULL
+            """)
+            total_products = cursor.fetchone()["total"] or 0
+
+            # Total video yang memiliki product
+            cursor.execute("""
+                SELECT COUNT(*) AS total
+                FROM tiktok_videos v
+                INNER JOIN upload_jobs uj ON v.upload_job_id = uj.id
+                WHERE uj.product_id IS NOT NULL
+            """)
+            total_videos = cursor.fetchone()["total"] or 0
+
+            # Total creator yang mempromosikan produk
+            cursor.execute("""
+                SELECT COUNT(DISTINCT v.creator_id) AS total
+                FROM tiktok_videos v
+                INNER JOIN upload_jobs uj ON v.upload_job_id = uj.id
+                WHERE uj.product_id IS NOT NULL
+            """)
+            total_creators = cursor.fetchone()["total"] or 0
+
+            return {
+                "total_products": total_products,
+                "total_videos": total_videos,
+                "total_creators": total_creators,
+            }
+    except Exception as e:
+        print(f"get_product_momentum_summary_stats() error: {e}")
+        return {"total_products": 0, "total_videos": 0, "total_creators": 0}
+    finally:
+        conn.close()
+
+
+
+# =============================================================================
 # BACKWARD COMPATIBILITY - Fungsi lama (masih dipanggil oleh matching engine)
 # =============================================================================
 

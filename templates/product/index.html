@@ -57,40 +57,24 @@
             <div class="card mt-3">
 
                 <div class="card-header">
-                    Basic Information
+                    <i class="ti ti-radar me-2"></i>
+                    Product Radar
                 </div>
 
-                <div class="card-body">
-
-                    <table class="table table-sm">
-
-                        <tr>
-                            <td>Harga</td>
-                            <td>Rp {{ "{:,}".format(product.price).replace(",", ".") }}</td>
-                        </tr>
-
-                        <tr>
-                            <td>Komisi</td>
-                            <td>Rp {{ "{:,}".format(product.komisi).replace(",", ".") }}</td>
-                        </tr>
-
-                        <tr>
-                            <td>Rating</td>
-                            <td>{{ product.rating }}</td>
-                        </tr>
-
-                        <tr>
-                            <td>Sold</td>
-                            <td>{{ product.sold }}</td>
-                        </tr>
-
-                        <tr>
-                            <td>Creator</td>
-                            <td>{{ product.jumlah_kreator }}</td>
-                        </tr>
-
-                    </table>
-
+                                <div class="card-body">
+                    {% if product %}
+                    <div class="radar-wrapper" style="position:relative;width:100%;max-width:380px;margin:0 auto;">
+                        <canvas id="productRadar"></canvas>
+                    </div>
+                    <div id="radarScoreTable"></div>
+                    {% else %}
+                    <div class="empty py-4">
+                        <div class="empty-icon mb-2">
+                            <i class="ti ti-radar" style="font-size:2rem;opacity:0.5;"></i>
+                        </div>
+                        <p class="empty-title text-muted">Data belum tersedia</p>
+                    </div>
+                    {% endif %}
                 </div>
 
             </div>
@@ -212,4 +196,21 @@
 </div>
 </div>
 
+{% endblock %}
+
+{% block scripts_extra %}
+{% if product %}
+<!-- Chart.js - CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<!-- Product Radar -->
+<script src="{{ url_for('static', filename='js/product_radar.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var productData = {{ product | tojson | safe }};
+    if (typeof initProductRadar === 'function') {
+        initProductRadar(productData);
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

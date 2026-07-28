@@ -32,6 +32,7 @@ from routers.creator.report import creator_report_bp
 from routers.creator.product_exposure import creator_product_exposure_bp
 from routers.creator.video_performance import video_performance_bp
 from routers.creator.video_analytics import creator_video_analytics_bp
+from routers.product_momentum.index import product_momentum_bp
 
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(product_rating_bp)
@@ -49,6 +50,7 @@ app.register_blueprint(creator_report_bp)
 app.register_blueprint(creator_product_exposure_bp)
 app.register_blueprint(video_performance_bp)
 app.register_blueprint(creator_video_analytics_bp)
+app.register_blueprint(product_momentum_bp)
 
 from routers.websocket.video_uploader import *
 

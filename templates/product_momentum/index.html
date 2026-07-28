@@ -1,0 +1,703 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- PAGE HEADER                                                   -->
+<!-- ============================================================ -->
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="ti ti-trending-up me-2"></i>
+                Product Momentum
+            </h2>
+            <div class="text-muted mt-1">
+                Menampilkan produk yang saat ini memiliki momentum terbaik berdasarkan seluruh data creator yang berhasil dianalisis.
+            </div>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <a href="/product_momentum" class="btn btn-outline-secondary btn-sm">
+                <i class="ti ti-refresh me-2"></i>
+                Refresh
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if has_data %}
+
+<!-- ============================================================ -->
+<!-- RINGKASAN STATISTIK                                          -->
+<!-- ============================================================ -->
+<div class="row row-deck row-cols-2 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
+    <div class="col">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="subheader text-nowrap mb-1">
+                    <i class="ti ti-box me-1 text-muted"></i>Total Produk
+                </div>
+                <div class="h1 mb-0">{{ summary.total_products }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="subheader text-nowrap mb-1">
+                    <i class="ti ti-device-analytics me-1 text-muted"></i>Produk Dianalisis
+                </div>
+                <div class="h1 mb-0">{{ summary.products_analyzed }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="subheader text-nowrap mb-1">
+                    <i class="ti ti-users me-1 text-muted"></i>Total Creator
+                </div>
+                <div class="h1 mb-0">{{ summary.total_creators }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="subheader text-nowrap mb-1">
+                    <i class="ti ti-video me-1 text-muted"></i>Total Video
+                </div>
+                <div class="h1 mb-0">{{ summary.total_videos }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="subheader text-nowrap mb-1">
+                    <i class="ti ti-chart-line me-1 text-muted"></i>Rata-rata Momentum
+                </div>
+                <div class="h1 mb-0">{{ summary.avg_momentum }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="subheader text-nowrap mb-1">
+                    <i class="ti ti-trending-up me-1 text-muted"></i>Momentum Tertinggi
+                </div>
+                <div class="h1 mb-0">{{ summary.highest_momentum }}</div>
+                <div class="text-muted extra-small text-truncate">{{ summary.highest_momentum_product }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOP 10 MOMENTUM + DISCOVERY                                  -->
+<!-- ============================================================ -->
+<div class="row g-3 mb-4">
+    <!-- Top 10 Momentum -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-trending-up me-2 text-primary"></i>
+                    Top 10 Product Momentum
+                </h3>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th width="50" class="text-center">#</th>
+                            <th>Produk</th>
+                            <th width="90" class="text-center">Momentum</th>
+                            <th width="70" class="text-center">Video</th>
+                            <th width="70" class="text-center">Creator</th>
+                            <th width="100" class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in momentum_rank[:10] %}
+                        <tr>
+                            <td class="text-center">
+                                <span class="fw-bold {% if loop.index <= 3 %}text-primary{% else %}text-muted{% endif %}">
+                                    {{ loop.index }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="fw-medium">{{ item.product }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold {% if item.momentum_score >= 150 %}text-green{% elif item.momentum_score >= 80 %}text-blue{% elif item.momentum_score >= 50 %}text-yellow{% else %}text-danger{% endif %}">
+                                    {{ item.momentum_score }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ item.videos }}</td>
+                            <td class="text-center">{{ item.creators }}</td>
+                            <td class="text-center">
+                                <span class="badge {{ item.status_color }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 10 Discovery -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-compass me-2 text-green"></i>
+                    Top 10 Discovery
+                </h3>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th width="50" class="text-center">#</th>
+                            <th>Produk</th>
+                            <th width="90" class="text-center">Discovery</th>
+                            <th width="80" class="text-center">Confidence</th>
+                            <th width="100" class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in discovery_rank[:10] %}
+                        <tr>
+                            <td class="text-center">
+                                <span class="fw-bold {% if loop.index <= 3 %}text-green{% else %}text-muted{% endif %}">
+                                    {{ loop.index }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="fw-medium">{{ item.product }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold text-green">
+                                    {{ item.discovery_score }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ (item.confidence * 100)|int }}%</td>
+                            <td class="text-center">
+                                <span class="badge {{ item.status_color }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- GRAFIK                                                        -->
+<!-- ============================================================ -->
+<div class="row g-3 mb-4">
+    <!-- Grafik Top 10 Momentum -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-chart-bar me-2 text-primary"></i>
+                    Grafik Top 10 Momentum
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="chartMomentum" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafik Top 10 Discovery -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-chart-bar me-2 text-green"></i>
+                    Grafik Top 10 Discovery
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="chartDiscovery" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribusi Momentum -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-chart-histogram me-2 text-muted"></i>
+                    Distribusi Momentum
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="chartDistribution" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribusi Kategori -->
+    {% if chart_data.category and chart_data.category.labels|length > 0 %}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-pie-chart me-2 text-muted"></i>
+                    Distribusi Kategori
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="chartCategory" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ============================================================ -->
+<!-- TABEL DETAIL                                                  -->
+<!-- ============================================================ -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="ti ti-table me-2"></i>
+            Detail Produk
+        </h3>
+        <div class="card-actions">
+            <div class="input-icon">
+                <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search produk..." onkeyup="filterTable()">
+                <span class="input-icon-addon">
+                    <i class="ti ti-search"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table table-hover align-middle mb-0" id="detailTable">
+            <thead>
+                <tr>
+                    <th width="40" class="text-center ps-3">#</th>
+                    <th class="text-nowrap sortable" onclick="sortTable(1)" style="cursor:pointer;">
+                        Produk <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="90" class="text-nowrap text-center sortable" onclick="sortTable(2)" style="cursor:pointer;">
+                        Momentum <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="90" class="text-nowrap text-center sortable" onclick="sortTable(3)" style="cursor:pointer;">
+                        Discovery <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="80" class="text-nowrap text-center sortable" onclick="sortTable(4)" style="cursor:pointer;">
+                        Confidence <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="60" class="text-nowrap text-center sortable" onclick="sortTable(5)" style="cursor:pointer;">
+                        Video <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="70" class="text-nowrap text-center sortable" onclick="sortTable(6)" style="cursor:pointer;">
+                        Creator <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="100" class="text-nowrap text-center sortable" onclick="sortTable(7)" style="cursor:pointer;">
+                        Avg View <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="100" class="text-nowrap text-center sortable" onclick="sortTable(8)" style="cursor:pointer;">
+                        Median View <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                    </th>
+                    <th width="70" class="text-nowrap text-center">Trend</th>
+                    <th width="90" class="text-nowrap text-center">Status</th>
+                    <th width="140" class="text-nowrap text-center pe-3">Terakhir Update</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in all_results %}
+                <tr class="detail-row" data-product="{{ item.product|lower }}">
+                    <td class="text-center ps-3"><span class="text-muted">{{ loop.index }}</span></td>
+                    <td>
+                        <span class="fw-medium">{{ item.product }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-bold {% if item.momentum_score >= 150 %}text-green{% elif item.momentum_score >= 80 %}text-blue{% elif item.momentum_score >= 50 %}text-yellow{% else %}text-danger{% endif %}">
+                            {{ item.momentum_score }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-medium text-green">{{ item.discovery_score }}</span>
+                    </td>
+                    <td class="text-center">{{ (item.confidence * 100)|int }}%</td>
+                    <td class="text-center">{{ item.videos }}</td>
+                    <td class="text-center">{{ item.creators }}</td>
+                    <td class="text-center">{{ "{:,}".format(item.avg_view) }}</td>
+                    <td class="text-center">{{ "{:,}".format(item.median_view) }}</td>
+                    <td class="text-center">
+                        {% if item.trend == "up" %}
+                        <span class="text-green"><i class="ti ti-trending-up"></i></span>
+                        {% elif item.trend == "down" %}
+                        <span class="text-danger"><i class="ti ti-trending-down"></i></span>
+                        {% else %}
+                        <span class="text-muted"><i class="ti ti-minus"></i></span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge {{ item.status_color }}">
+                            {{ item.status }}
+                        </span>
+                    </td>
+                    <td class="text-center pe-3 small text-muted">{{ item.last_update }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer d-flex align-items-center justify-content-between">
+        <div class="text-muted small">
+            Menampilkan <span id="visibleCount">{{ all_results|length }}</span> dari {{ all_results|length }} produk
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination">
+                <li class="page-item disabled" id="prevPage">
+                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item disabled" id="nextPage">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+{% else %}
+<!-- ============================================================ -->
+<!-- EMPTY STATE                                                   -->
+<!-- ============================================================ -->
+<div class="card">
+    <div class="card-body text-center py-6">
+        <div class="mb-4">
+            <i class="ti ti-trending-up text-muted" style="font-size: 3rem;"></i>
+        </div>
+        <h3 class="text-muted mb-2">Belum ada data Product Momentum</h3>
+        <p class="text-secondary mb-4">
+            Data Product Momentum akan tersedia setelah terdapat video TikTok yang ter-match dengan produk.
+        </p>
+        <p class="text-muted small">
+            Pastikan anda telah melakukan scan video TikTok dan melakukan matching dengan produk.
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- ============================================================ -->
+<!-- CUSTOM STYLES                                                 -->
+<!-- ============================================================ -->
+<style>
+.extra-small {
+    font-size: 0.625rem;
+    line-height: 1.2;
+}
+.sortable:hover {
+    color: var(--tblr-primary, #206bc4);
+}
+#detailTable thead th {
+    background-color: #f8fafc;
+    border-bottom: 2px solid #dce1e7;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: #5a626d;
+    white-space: nowrap;
+    user-select: none;
+}
+#detailTable tbody tr {
+    transition: background-color 0.15s ease;
+}
+#detailTable tbody tr:hover {
+    background-color: rgba(32, 107, 196, 0.04);
+}
+#detailTable td {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    vertical-align: middle;
+}
+.row-deck .card {
+    height: calc(100% - var(--tblr-gutter-y));
+}
+</style>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS: Chart.js                                             -->
+<!-- ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ============================================================
+    // 1. GRAFIK TOP 10 MOMENTUM (Horizontal Bar)
+    // ============================================================
+    var chartMomentumData = {{ chart_data.momentum | tojson | safe }};
+    if (chartMomentumData && chartMomentumData.labels && chartMomentumData.labels.length > 0) {
+        var ctx = document.getElementById('chartMomentum');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartMomentumData.labels,
+                    datasets: [{
+                        label: 'Momentum Score',
+                        data: chartMomentumData.data,
+                        backgroundColor: chartMomentumData.colors || '#206bc4',
+                        borderColor: chartMomentumData.colors || '#206bc4',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Momentum: ' + context.parsed.x;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { display: true },
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // ============================================================
+    // 2. GRAFIK TOP 10 DISCOVERY (Horizontal Bar)
+    // ============================================================
+    var chartDiscoveryData = {{ chart_data.discovery | tojson | safe }};
+    if (chartDiscoveryData && chartDiscoveryData.labels && chartDiscoveryData.labels.length > 0) {
+        var ctx = document.getElementById('chartDiscovery');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartDiscoveryData.labels,
+                    datasets: [{
+                        label: 'Discovery Score',
+                        data: chartDiscoveryData.data,
+                        backgroundColor: chartDiscoveryData.colors || '#2fb344',
+                        borderColor: chartDiscoveryData.colors || '#2fb344',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Discovery: ' + context.parsed.x;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { display: true },
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // ============================================================
+    // 3. DISTRIBUSI MOMENTUM (Bar Chart)
+    // ============================================================
+    var chartDistData = {{ chart_data.distribution | tojson | safe }};
+    if (chartDistData && chartDistData.labels && chartDistData.labels.length > 0) {
+        var ctx = document.getElementById('chartDistribution');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartDistData.labels,
+                    datasets: [{
+                        label: 'Jumlah Produk',
+                        data: chartDistData.data,
+                        backgroundColor: chartDistData.colors || ['#d63939', '#f59f00', '#17a2b8', '#2fb344'],
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + ' produk';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // ============================================================
+    // 4. DISTRIBUSI KATEGORI (Pie Chart)
+    // ============================================================
+    var chartCatData = {{ chart_data.category | tojson | safe }};
+    if (chartCatData && chartCatData.labels && chartCatData.labels.length > 0) {
+        var ctx = document.getElementById('chartCategory');
+        if (ctx) {
+            var catColors = chartCatData.labels.map(function(label) {
+                return chartCatData.colors[label] || '#656d77';
+            });
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartCatData.labels,
+                    datasets: [{
+                        data: chartCatData.data,
+                        backgroundColor: catColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 16,
+                                boxWidth: 12,
+                                font: { size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var label = context.label || '';
+                                    var value = context.parsed || 0;
+                                    var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                    var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return label + ': ' + value + ' (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+
+// ============================================================
+// SEARCH / FILTER
+// ============================================================
+function filterTable() {
+    var input = document.getElementById('searchInput');
+    var filter = input.value.toLowerCase();
+    var rows = document.querySelectorAll('.detail-row');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var product = row.getAttribute('data-product') || '';
+        if (product.indexOf(filter) > -1) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    document.getElementById('visibleCount').textContent = visible;
+}
+
+// ============================================================
+// SORTING (simple client-side)
+// ============================================================
+var sortDirection = {};
+function sortTable(colIndex) {
+    var table = document.getElementById('detailTable');
+    var tbody = table.querySelector('tbody');
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Toggle direction
+    var key = 'col' + colIndex;
+    sortDirection[key] = !(sortDirection[key] || false);
+    var ascending = sortDirection[key];
+
+    rows.sort(function(a, b) {
+        var aVal = a.cells[colIndex].textContent.trim();
+        var bVal = b.cells[colIndex].textContent.trim();
+
+        // Try numeric
+        var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
+        var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return ascending ? aNum - bNum : bNum - aNum;
+        }
+        // String comparison
+        return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    rows.forEach(function(row, index) {
+        row.querySelector('td:first-child').textContent = index + 1;
+        tbody.appendChild(row);
+    });
+}
+</script>
+
+{% endblock %}

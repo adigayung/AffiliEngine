@@ -9,7 +9,9 @@
         <div class="collapse navbar-collapse show">
             <ul class="navbar-nav pt-lg-2">
 
-                <!-- DASHBOARD -->
+                <!-- ============================================================
+                     DASHBOARD
+                ============================================================ -->
                 <li class="nav-item">
                     <a class="nav-link active" href="/">
                         <span class="nav-link-icon">
@@ -21,7 +23,9 @@
                     </a>
                 </li>
 
-                <!-- SUB-MENU: PRODUCTS -->
+                <!-- ============================================================
+                     PRODUCTS
+                ============================================================ -->
                 <li class="nav-item mt-3">
                     <div class="hr-text hr-text-left text-muted opacity-50 m-0 px-3 text-uppercase tracking-wider" style="font-size: 0.65rem;">
                         Products
@@ -39,24 +43,33 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="/upload_video">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-cloud-upload"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Upload Video
-                        </span>
-                    </a>
+                <!-- ============================================================
+                     UPLOAD
+                ============================================================ -->
+                <li class="nav-item mt-3">
+                    <div class="hr-text hr-text-left text-muted opacity-50 m-0 px-3 text-uppercase tracking-wider" style="font-size: 0.65rem;">
+                        Upload
+                    </div>
                 </li>
 
-                                <li class="nav-item">
+                <li class="nav-item">
                     <a class="nav-link" href="/prepare_upload">
                         <span class="nav-link-icon">
                             <i class="ti ti-cloud-upload"></i>
                         </span>
                         <span class="nav-link-title">
                             Prepare Upload
+                        </span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="/upload_video">
+                        <span class="nav-link-icon">
+                            <i class="ti ti-upload"></i>
+                        </span>
+                        <span class="nav-link-title">
+                            Upload Video
                         </span>
                     </a>
                 </li>
@@ -72,105 +85,107 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="/tiktok_uploader">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-brand-tiktok"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Tiktok Uploader
-                        </span>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-arrows-diff"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Compare Products
-                        </span>
-                    </a>
-                </li>
-
-                <!-- SUB-MENU: ANALYZE -->
+                <!-- ============================================================
+                     ANALYTICS ─ Collapsible Nav-Group (Tabler dropdown)
+                ============================================================ -->
                 <li class="nav-item mt-3">
                     <div class="hr-text hr-text-left text-muted opacity-50 m-0 px-3 text-uppercase tracking-wider" style="font-size: 0.65rem;">
-                        Analyze
+                        Analytics
                     </div>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="/product-rating">
+                    <a class="nav-link" href="#navbar-analytics" data-bs-toggle="collapse" role="button" aria-expanded="false">
                         <span class="nav-link-icon">
                             <i class="ti ti-device-analytics"></i>
                         </span>
                         <span class="nav-link-title">
-                            Analyze Product
+                            Analytics
                         </span>
+                        <span class="nav-link-toggle"></span>
                     </a>
-                </li>
+                    <div class="collapse" id="navbar-analytics">
+                        <ul class="nav nav-sm flex-column">
 
-                <!-- SUB-MENU: CREATORS (Double HR dihapus) -->
-                <li class="nav-item mt-3">
-                    <div class="hr-text hr-text-left text-muted opacity-50 m-0 px-3 text-uppercase tracking-wider" style="font-size: 0.65rem;">
-                        Creators
+                            <li class="nav-item">
+                                <a class="nav-link" href="/product-rating">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-device-analytics nav-icon-inline"></i>
+                                        Analyze Product
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="/product_momentum">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-trending-up nav-icon-inline"></i>
+                                        Product Momentum
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-arrows-diff nav-icon-inline"></i>
+                                        Compare Products
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="/creator">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-users nav-icon-inline"></i>
+                                        Creator List
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% if current_creator %}{{ url_for('creator_product_exposure.product_exposure', creator_id=current_creator.id) }}{% else %}#{% endif %}">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-box nav-icon-inline"></i>
+                                        Product Exposure
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% if current_creator %}{{ url_for('video_performance.video_performance', creator_id=current_creator.id) }}{% else %}#{% endif %}">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-video nav-icon-inline"></i>
+                                        Video Performance
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% if current_creator %}{{ url_for('creator_video_analytics.video_analytics', creator_id=current_creator.id) }}{% else %}#{% endif %}">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-chart-bar nav-icon-inline"></i>
+                                        Video Analytics
+                                    </span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% if current_creator %}{{ url_for('creator_report.creator_report', creator_id=current_creator.id) }}{% else %}#{% endif %}">
+                                    <span class="nav-link-title">
+                                        <i class="ti ti-calendar-stats nav-icon-inline"></i>
+                                        Jadwal Upload
+                                    </span>
+                                </a>
+                            </li>
+
+                        </ul>
                     </div>
                 </li>
 
-                                                <li class="nav-item">
-                    <a class="nav-link" href="/creator">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-users"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Creator List
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% if current_creator %}{{ url_for('creator_product_exposure.product_exposure', creator_id=current_creator.id) }}{% else %}#{% endif %}">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-box"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Product Exposure
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% if current_creator %}{{ url_for('video_performance.video_performance', creator_id=current_creator.id) }}{% else %}#{% endif %}">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-video"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Video Performance
-                        </span>
-                    </a>
-                </li>
-                                <li class="nav-item">
-                    <a class="nav-link" href="{% if current_creator %}{{ url_for('creator_report.creator_report', creator_id=current_creator.id) }}{% else %}#{% endif %}">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-calendar-stats"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Lihat Jadwal Upload
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% if current_creator %}{{ url_for('creator_video_analytics.video_analytics', creator_id=current_creator.id) }}{% else %}#{% endif %}">
-                        <span class="nav-link-icon">
-                            <i class="ti ti-chart-bar"></i>
-                        </span>
-                        <span class="nav-link-title">
-                            Video Analytics
-                        </span>
-                    </a>
-                </li>
-
-                <!-- SUB-MENU: SYSTEM -->
+                <!-- ============================================================
+                     SYSTEM
+                ============================================================ -->
                 <li class="nav-item mt-3">
                     <div class="hr-text hr-text-left text-muted opacity-50 m-0 px-3 text-uppercase tracking-wider" style="font-size: 0.65rem;">
                         System
@@ -192,3 +207,17 @@
         </div>
     </div>
 </aside>
+
+<style>
+/* ── Sub-menu inline icons ── */
+.nav-icon-inline {
+    font-size: 0.9rem;
+    margin-right: 0.35rem;
+    opacity: 0.7;
+}
+
+/* ── Hover state consistency for sub-items ── */
+#navbar-analytics .nav-link:hover {
+    color: #ffffff;
+}
+</style>
