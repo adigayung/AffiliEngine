@@ -245,6 +245,7 @@ class ProductMomentumAnalyzer:
                     "videos": [],
                     "creators": set(),
                     "product_id": item.get("product_id"),
+                "tiktok_id_product": item.get("tiktok_id_product"),
                 }
 
             self.produk_data[product_name]["videos"].append(video_info)
@@ -376,6 +377,7 @@ class ProductMomentumAnalyzer:
             self.hasil.append({
                 "product": product_name,
                 "product_id": pdata.get("product_id"),
+                "tiktok_id_product": pdata.get("tiktok_id_product"),
                 "momentum_score": round(momentum_score, 2),
                 "discovery_score": round(discovery_score, 2),
                 "avg_growth": round(avg_weighted_growth),

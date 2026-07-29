@@ -1374,7 +1374,7 @@ def get_video_performance_list(creator_id):
 # Relasi:
 #   tiktok_video_stats.video_id -> tiktok_videos.id
 #   tiktok_videos.upload_job_id -> upload_jobs.id
-#   upload_jobs.product_id -> tiktok_products.id
+#   upload_jobs.product_id -> tiktok_products.tiktok_id_product
 #   tiktok_videos.creator_id -> creators.id
 # =============================================================================
 
@@ -1408,6 +1408,7 @@ def get_product_momentum_data():
             sql = """
                 SELECT
                     p.id AS product_id,
+                    p.tiktok_id_product,
                     p.title AS product_name,
                     v.id AS video_pk,
                     v.video_id,
@@ -1418,7 +1419,7 @@ def get_product_momentum_data():
                 FROM tiktok_video_stats s
                 INNER JOIN tiktok_videos v ON s.video_id = v.id
                 INNER JOIN upload_jobs uj ON v.upload_job_id = uj.id
-                INNER JOIN tiktok_products p ON uj.product_id = p.id
+                INNER JOIN tiktok_products p ON uj.product_id = p.tiktok_id_product
                 LEFT JOIN creators c ON v.creator_id = c.id
                 WHERE p.title IS NOT NULL AND p.title != ''
                   AND uj.product_id IS NOT NULL
@@ -1439,6 +1440,7 @@ def get_product_momentum_data():
                     grouped[key] = {
                         "product_name": row["product_name"],
                         "product_id": row["product_id"],
+                        "tiktok_id_product": row["tiktok_id_product"],
                         "video_id": row["video_id"],
                         "creator_name": row["creator_name"] or "Unknown",
                         "views_by_date": [],
@@ -1466,6 +1468,7 @@ def get_product_momentum_data():
                     result.append({
                         "product_name": data["product_name"],
                         "product_id": data["product_id"],
+                        "tiktok_id_product": data["tiktok_id_product"],
                         "video_id": data["video_id"],
                         "creator_name": data["creator_name"],
                         "daily_views": daily_views,

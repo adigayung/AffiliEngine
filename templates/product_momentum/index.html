@@ -1,4 +1,4 @@
-{% extends 'layouts/base.html' %}
+﻿{% extends 'layouts/base.html' %}
 
 {% block content %}
 
@@ -13,7 +13,7 @@
                 Product Momentum
             </h2>
             <div class="text-muted mt-1">
-                Menampilkan produk yang saat ini memiliki momentum terbaik berdasarkan seluruh data creator yang berhasil dianalisis.
+                Dashboard analisis momentum produk berdasarkan performa video TikTok.
             </div>
         </div>
         <div class="col-auto d-flex gap-2">
@@ -88,14 +88,13 @@
                     <i class="ti ti-trending-up me-1 text-muted"></i>Momentum Tertinggi
                 </div>
                 <div class="h1 mb-0">{{ summary.highest_momentum }}</div>
-                <div class="text-muted extra-small text-truncate">{{ summary.highest_momentum_product }}</div>
+                <div class="text-muted extra-small text-truncate" title="{{ summary.highest_momentum_product }}">{{ summary.highest_momentum_product }}</div>
             </div>
         </div>
     </div>
 </div>
-
 <!-- ============================================================ -->
-<!-- TOP 10 MOMENTUM + DISCOVERY                                  -->
+<!-- TOP 10 MOMENTUM + DISCOVERY - CARD LAYOUT                    -->
 <!-- ============================================================ -->
 <div class="row g-3 mb-4">
     <!-- Top 10 Momentum -->
@@ -107,45 +106,62 @@
                     Top 10 Product Momentum
                 </h3>
             </div>
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th width="50" class="text-center">#</th>
-                            <th>Produk</th>
-                            <th width="90" class="text-center">Momentum</th>
-                            <th width="70" class="text-center">Video</th>
-                            <th width="70" class="text-center">Creator</th>
-                            <th width="100" class="text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in momentum_rank[:10] %}
-                        <tr>
-                            <td class="text-center">
-                                <span class="fw-bold {% if loop.index <= 3 %}text-primary{% else %}text-muted{% endif %}">
-                                    {{ loop.index }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="fw-medium">{{ item.product }}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="fw-bold {% if item.momentum_score >= 150 %}text-green{% elif item.momentum_score >= 80 %}text-blue{% elif item.momentum_score >= 50 %}text-yellow{% else %}text-danger{% endif %}">
-                                    {{ item.momentum_score }}
-                                </span>
-                            </td>
-                            <td class="text-center">{{ item.videos }}</td>
-                            <td class="text-center">{{ item.creators }}</td>
-                            <td class="text-center">
-                                <span class="badge {{ item.status_color }}">
-                                    {{ item.status }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for item in momentum_rank %}
+                    <a href="/product/{{ item.tiktok_id_product }}" class="list-group-item list-group-item-action p-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Ranking Badge -->
+                            <div class="d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                {% if loop.index == 1 %}
+                                <span class="badge bg-red rounded-pill" style="font-size:0.7rem;">#1</span>
+                                {% elif loop.index == 2 %}
+                                <span class="badge bg-orange rounded-pill" style="font-size:0.7rem;">#2</span>
+                                {% elif loop.index == 3 %}
+                                <span class="badge bg-yellow rounded-pill" style="font-size:0.7rem;">#3</span>
+                                {% else %}
+                                <span class="text-muted fw-semibold" style="font-size:0.75rem;">#{{ loop.index }}</span>
+                                {% endif %}
+                            </div>
+                            <!-- Thumbnail -->
+                            <div class="flex-shrink-0">
+                                <img src="/static/products/{{ item.tiktok_id_product }}/product/1.jpg"
+                                     onerror="this.onerror=null;this.src='/static/products/no_product.jpg'"
+                                     alt="{{ item.product }}"
+                                     class="rounded"
+                                     style="width: 52px; height: 52px; object-fit: cover;"
+                                     loading="lazy">
+                            </div>
+                            <!-- Product Info -->
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate" title="{{ item.product }}">
+                                    {{ item.product.split()[:4]|join(' ') }}{% if item.product.split()|length > 4 %}...{% endif %}
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <span class="fw-bold {% if item.momentum_score >= 150 %}text-green{% elif item.momentum_score >= 80 %}text-blue{% elif item.momentum_score >= 50 %}text-yellow{% else %}text-danger{% endif %}"
+                                          title="Momentum Score: Mengukur pertumbuhan dan potensi produk berdasarkan data video. Semakin tinggi semakin baik.">
+                                        <i class="ti ti-trending-up me-1" style="font-size:0.7rem;"></i>{{ item.momentum_score }}
+                                    </span>
+                                    <span class="text-muted small">|</span>
+                                    <span class="small text-muted">
+                                        <i class="ti ti-video me-1"></i>{{ item.videos }}
+                                    </span>
+                                    <span class="text-muted small">|</span>
+                                    <span class="small text-muted">
+                                        <i class="ti ti-users me-1"></i>{{ item.creators }}
+                                    </span>
+                                    <span class="ms-auto">
+                                        <span class="badge {{ item.status_color }}"
+                                              title="{% if item.status == 'Winner' %}Produk dengan momentum tinggi dan pertumbuhan konsisten.{% elif item.status == 'Stable' %}Produk dengan performa stabil dan dapat diandalkan.{% elif item.status == 'Spike' %}Produk dengan lonjakan views singkat, perlu dimonitor.{% elif item.status == 'Old' %}Produk yang pernah populer tapi sekarang menurun.{% elif item.status == 'Noise' %}Data tidak konsisten, perlu observasi lebih lanjut.{% elif item.status == 'Single' %}Hanya 1 video, data masih terbatas.{% endif %}">
+                                            {{ item.status }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
@@ -159,53 +175,66 @@
                     Top 10 Discovery
                 </h3>
             </div>
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th width="50" class="text-center">#</th>
-                            <th>Produk</th>
-                            <th width="90" class="text-center">Discovery</th>
-                            <th width="80" class="text-center">Confidence</th>
-                            <th width="100" class="text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in discovery_rank[:10] %}
-                        <tr>
-                            <td class="text-center">
-                                <span class="fw-bold {% if loop.index <= 3 %}text-green{% else %}text-muted{% endif %}">
-                                    {{ loop.index }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="fw-medium">{{ item.product }}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="fw-bold text-green">
-                                    {{ item.discovery_score }}
-                                </span>
-                            </td>
-                            <td class="text-center">{{ (item.confidence * 100)|int }}%</td>
-                            <td class="text-center">
-                                <span class="badge {{ item.status_color }}">
-                                    {{ item.status }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for item in discovery_rank %}
+                    <a href="/product/{{ item.tiktok_id_product }}" class="list-group-item list-group-item-action p-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Ranking Badge -->
+                            <div class="d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                {% if loop.index == 1 %}
+                                <span class="badge bg-red rounded-pill" style="font-size:0.7rem;">#1</span>
+                                {% elif loop.index == 2 %}
+                                <span class="badge bg-orange rounded-pill" style="font-size:0.7rem;">#2</span>
+                                {% elif loop.index == 3 %}
+                                <span class="badge bg-yellow rounded-pill" style="font-size:0.7rem;">#3</span>
+                                {% else %}
+                                <span class="text-muted fw-semibold" style="font-size:0.75rem;">#{{ loop.index }}</span>
+                                {% endif %}
+                            </div>
+                            <!-- Thumbnail -->
+                            <div class="flex-shrink-0">
+                                <img src="/static/products/{{ item.tiktok_id_product }}/product/1.jpg"
+                                     onerror="this.onerror=null;this.src='/static/products/no_product.jpg'"
+                                     alt="{{ item.product }}"
+                                     class="rounded"
+                                     style="width: 52px; height: 52px; object-fit: cover;"
+                                     loading="lazy">
+                            </div>
+                            <!-- Product Info -->
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate" title="{{ item.product }}">
+                                    {{ item.product.split()[:4]|join(' ') }}{% if item.product.split()|length > 4 %}...{% endif %}
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <span class="fw-bold text-green"
+                                          title="Discovery Score: Mengukur potensi produk yang belum banyak dikenal. Semakin tinggi semakin besar potensi.">
+                                        <i class="ti ti-compass me-1" style="font-size:0.7rem;"></i>{{ item.discovery_score }}
+                                    </span>
+                                    <span class="text-muted small">|</span>
+                                    <span class="small text-muted">
+                                        Confidence: {{ (item.confidence * 100)|int }}%
+                                    </span>
+                                    <span class="ms-auto">
+                                        <span class="badge {{ item.status_color }}"
+                                              title="{% if item.status == 'Winner' %}Produk dengan momentum tinggi dan pertumbuhan konsisten.{% elif item.status == 'Stable' %}Produk dengan performa stabil dan dapat diandalkan.{% elif item.status == 'Spike' %}Produk dengan lonjakan views singkat, perlu dimonitor.{% elif item.status == 'Old' %}Produk yang pernah populer tapi sekarang menurun.{% elif item.status == 'Noise' %}Data tidak konsisten, perlu observasi lebih lanjut.{% elif item.status == 'Single' %}Hanya 1 video, data masih terbatas.{% endif %}">
+                                            {{ item.status }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
 </div>
-
 <!-- ============================================================ -->
 <!-- GRAFIK                                                        -->
 <!-- ============================================================ -->
 <div class="row g-3 mb-4">
-    <!-- Grafik Top 10 Momentum -->
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header">
@@ -220,7 +249,6 @@
         </div>
     </div>
 
-    <!-- Grafik Top 10 Discovery -->
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header">
@@ -235,7 +263,6 @@
         </div>
     </div>
 
-    <!-- Distribusi Momentum -->
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header">
@@ -250,7 +277,6 @@
         </div>
     </div>
 
-    <!-- Distribusi Kategori -->
     {% if chart_data.category and chart_data.category.labels|length > 0 %}
     <div class="col-lg-6">
         <div class="card">
@@ -291,66 +317,82 @@
             <thead>
                 <tr>
                     <th width="40" class="text-center ps-3">#</th>
-                    <th class="text-nowrap sortable" onclick="sortTable(1)" style="cursor:pointer;">
+                    <th width="70">Thumbnail</th>
+                    <th class="text-nowrap sortable" onclick="sortTable(2)" style="cursor:pointer;">
                         Produk <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
-                    <th width="90" class="text-nowrap text-center sortable" onclick="sortTable(2)" style="cursor:pointer;">
+                    <th width="90" class="text-nowrap text-center sortable" onclick="sortTable(3)" style="cursor:pointer;">
                         Momentum <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
-                    <th width="90" class="text-nowrap text-center sortable" onclick="sortTable(3)" style="cursor:pointer;">
+                    <th width="90" class="text-nowrap text-center sortable" onclick="sortTable(4)" style="cursor:pointer;">
                         Discovery <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
-                    <th width="80" class="text-nowrap text-center sortable" onclick="sortTable(4)" style="cursor:pointer;">
+                    <th width="80" class="text-nowrap text-center sortable" onclick="sortTable(5)" style="cursor:pointer;">
                         Confidence <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
-                    <th width="60" class="text-nowrap text-center sortable" onclick="sortTable(5)" style="cursor:pointer;">
+                    <th width="60" class="text-nowrap text-center sortable" onclick="sortTable(6)" style="cursor:pointer;">
                         Video <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
-                    <th width="70" class="text-nowrap text-center sortable" onclick="sortTable(6)" style="cursor:pointer;">
+                    <th width="70" class="text-nowrap text-center sortable" onclick="sortTable(7)" style="cursor:pointer;">
                         Creator <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
-                    <th width="100" class="text-nowrap text-center sortable" onclick="sortTable(7)" style="cursor:pointer;">
-                        Avg View <i class="ti ti-arrows-sort text-muted ms-1"></i>
-                    </th>
                     <th width="100" class="text-nowrap text-center sortable" onclick="sortTable(8)" style="cursor:pointer;">
-                        Median View <i class="ti ti-arrows-sort text-muted ms-1"></i>
+                        Avg View <i class="ti ti-arrows-sort text-muted ms-1"></i>
                     </th>
                     <th width="70" class="text-nowrap text-center">Trend</th>
                     <th width="90" class="text-nowrap text-center">Status</th>
-                    <th width="140" class="text-nowrap text-center pe-3">Terakhir Update</th>
+                    <th width="140" class="text-nowrap text-center pe-3">Update</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in all_results %}
                 <tr class="detail-row" data-product="{{ item.product|lower }}">
                     <td class="text-center ps-3"><span class="text-muted">{{ loop.index }}</span></td>
+                    <td class="text-center">
+                        <a href="/product/{{ item.tiktok_id_product }}">
+                            <img src="/static/products/{{ item.tiktok_id_product }}/product/1.jpg"
+                                 onerror="this.onerror=null;this.src='/static/products/no_product.jpg'"
+                                 alt="{{ item.product }}"
+                                 class="rounded"
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                        </a>
+                    </td>
                     <td>
-                        <span class="fw-medium">{{ item.product }}</span>
+                        <a href="/product/{{ item.tiktok_id_product }}" class="text-reset text-decoration-none">
+                            <span class="fw-medium" title="{{ item.product }}">{{ item.product.split()[:4]|join(' ') }}{% if item.product.split()|length > 4 %}...{% endif %}</span>
+                        </a>
                     </td>
                     <td class="text-center">
-                        <span class="fw-bold {% if item.momentum_score >= 150 %}text-green{% elif item.momentum_score >= 80 %}text-blue{% elif item.momentum_score >= 50 %}text-yellow{% else %}text-danger{% endif %}">
+                        <span class="fw-bold {% if item.momentum_score >= 150 %}text-green{% elif item.momentum_score >= 80 %}text-blue{% elif item.momentum_score >= 50 %}text-yellow{% else %}text-danger{% endif %}"
+                              title="Momentum Score: Mengukur pertumbuhan dan potensi produk berdasarkan data video. Semakin tinggi semakin baik.">
                             {{ item.momentum_score }}
                         </span>
                     </td>
                     <td class="text-center">
-                        <span class="fw-medium text-green">{{ item.discovery_score }}</span>
+                        <span class="fw-medium text-green"
+                              title="Discovery Score: Mengukur potensi produk yang belum banyak dikenal. Semakin tinggi semakin besar potensi.">
+                            {{ item.discovery_score }}
+                        </span>
                     </td>
-                    <td class="text-center">{{ (item.confidence * 100)|int }}%</td>
+                    <td class="text-center"
+                        title="Confidence: Keyakinan analisis berdasarkan jumlah video. Makin banyak video makin tinggi confidence.">
+                        {{ (item.confidence * 100)|int }}%
+                    </td>
                     <td class="text-center">{{ item.videos }}</td>
                     <td class="text-center">{{ item.creators }}</td>
                     <td class="text-center">{{ "{:,}".format(item.avg_view) }}</td>
-                    <td class="text-center">{{ "{:,}".format(item.median_view) }}</td>
                     <td class="text-center">
                         {% if item.trend == "up" %}
-                        <span class="text-green"><i class="ti ti-trending-up"></i></span>
+                        <span class="text-green" title="Trend: Meningkat"><i class="ti ti-trending-up"></i></span>
                         {% elif item.trend == "down" %}
-                        <span class="text-danger"><i class="ti ti-trending-down"></i></span>
+                        <span class="text-danger" title="Trend: Menurun"><i class="ti ti-trending-down"></i></span>
                         {% else %}
-                        <span class="text-muted"><i class="ti ti-minus"></i></span>
+                        <span class="text-muted" title="Trend: Stabil"><i class="ti ti-minus"></i></span>
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <span class="badge {{ item.status_color }}">
+                        <span class="badge {{ item.status_color }}"
+                              title="{% if item.status == 'Winner' %}Produk dengan momentum tinggi dan pertumbuhan konsisten.{% elif item.status == 'Stable' %}Produk dengan performa stabil dan dapat diandalkan.{% elif item.status == 'Spike' %}Produk dengan lonjakan views singkat, perlu dimonitor.{% elif item.status == 'Old' %}Produk yang pernah populer tapi sekarang menurun.{% elif item.status == 'Noise' %}Data tidak konsisten, perlu observasi lebih lanjut.{% elif item.status == 'Single' %}Hanya 1 video, data masih terbatas.{% endif %}">
                             {{ item.status }}
                         </span>
                     </td>
@@ -364,17 +406,6 @@
         <div class="text-muted small">
             Menampilkan <span id="visibleCount">{{ all_results|length }}</span> dari {{ all_results|length }} produk
         </div>
-        <nav>
-            <ul class="pagination pagination-sm mb-0" id="pagination">
-                <li class="page-item disabled" id="prevPage">
-                    <a class="page-link" href="#" tabindex="-1">Previous</a>
-                </li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item disabled" id="nextPage">
-                    <a class="page-link" href="#">Next</a>
-                </li>
-            </ul>
-        </nav>
     </div>
 </div>
 
@@ -397,7 +428,6 @@
     </div>
 </div>
 {% endif %}
-
 <!-- ============================================================ -->
 <!-- CUSTOM STYLES                                                 -->
 <!-- ============================================================ -->
@@ -435,6 +465,49 @@
 }
 .row-deck .card {
     height: calc(100% - var(--tblr-gutter-y));
+}
+.list-group-item-action {
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.list-group-item-action:hover {
+    background-color: rgba(32, 107, 196, 0.04);
+    transform: translateX(2px);
+}
+.min-w-0 {
+    min-width: 0;
+}
+@media (max-width: 768px) {
+    .list-group-item img {
+        width: 42px !important;
+        height: 42px !important;
+    }
+    .list-group-item .badge.rounded-pill {
+        font-size: 0.6rem !important;
+        min-width: 24px;
+    }
+    .list-group-item .fw-semibold {
+        font-size: 0.8rem;
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #detailTable {
+        font-size: 0.75rem;
+    }
+    #detailTable th, #detailTable td {
+        padding-left: 0.3rem !important;
+        padding-right: 0.3rem !important;
+    }
+}
+@media (max-width: 480px) {
+    .list-group-item .fw-semibold {
+        max-width: 100px;
+    }
+    .list-group-item img {
+        width: 36px !important;
+        height: 36px !important;
+    }
 }
 </style>
 
@@ -674,7 +747,6 @@ function sortTable(colIndex) {
     var tbody = table.querySelector('tbody');
     var rows = Array.from(tbody.querySelectorAll('tr'));
 
-    // Toggle direction
     var key = 'col' + colIndex;
     sortDirection[key] = !(sortDirection[key] || false);
     var ascending = sortDirection[key];
@@ -683,13 +755,11 @@ function sortTable(colIndex) {
         var aVal = a.cells[colIndex].textContent.trim();
         var bVal = b.cells[colIndex].textContent.trim();
 
-        // Try numeric
         var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
         var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
         if (!isNaN(aNum) && !isNaN(bNum)) {
             return ascending ? aNum - bNum : bNum - aNum;
         }
-        // String comparison
         return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
 
