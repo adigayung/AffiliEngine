@@ -14,6 +14,7 @@ from includes.mysql import get_product_momentum_data
 from includes.product_momentum.models import (
     ProductSummary,
     ChartData,
+    empty_chart_data,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,8 +102,8 @@ def classify_product(item):
     stability = item.get("stability", 0)
     penalty = item.get("penalty", 1.0)
 
-    # Single video penalty
-    if penalty <= 0.25:
+        # Single video penalty
+    if penalty <= 0.5 and videos <= 2:
         return "Single"
 
     # High momentum + high consistency + banyak video/creator = Winner
@@ -244,8 +245,8 @@ class ProductMomentumAnalyzer:
                 self.produk_data[product_name] = {
                     "videos": [],
                     "creators": set(),
-                    "product_id": item.get("product_id"),
-                "tiktok_id_product": item.get("tiktok_id_product"),
+                                        "product_id": item.get("product_id"),
+                    "tiktok_id_product": item.get("tiktok_id_product"),
                 }
 
             self.produk_data[product_name]["videos"].append(video_info)
@@ -283,8 +284,17 @@ class ProductMomentumAnalyzer:
             total_weighted_growth = sum(v["weighted_growth"] for v in videos)
             avg_weighted_growth = total_weighted_growth / video_count if video_count > 0 else 0
 
-            # --- B. Video Validation (Confidence) ---
-            confidence = min(video_count / 5.0, 1.0)
+                        # --- B. Video Validation (Confidence) ---
+            # Confidence = kombinasi video_count + creator_count + spread
+            # Tujuannya: 5 video dari 5 creator != 5 video dari 1 creator
+            video_confidence = min(video_count / 5.0, 1.0)
+            creator_confidence = min(creator_count / 3.0, 1.0)
+            if video_count > 0:
+                creator_ratio = creator_count / video_count
+                spread_factor = min(creator_ratio * 2.0, 1.0)
+            else:
+                spread_factor = 0.0
+            confidence = video_confidence * 0.5 + creator_confidence * 0.3 + spread_factor * 0.2
 
             # --- C. Creator Factor (Logarithmic) ---
             if creator_count > 0:
@@ -298,7 +308,9 @@ class ProductMomentumAnalyzer:
             # --- D. Consistency ---
             avg_konsistensi = sum(v["konsistensi"] for v in videos) / video_count if video_count > 0 else 0
 
-            # --- E. Stability (Growth Distribution) ---
+                        # --- E. Stability (Growth Distribution) ---
+            # Gunakan Coefficient of Variation (CV) supaya scale-invariant
+            # Produk kecil maupun besar dinilai secara adil
             growth_values = [v["weighted_growth"] for v in videos]
 
             if video_count > 1:
@@ -306,22 +318,28 @@ class ProductMomentumAnalyzer:
             else:
                 growth_std = 0
 
-            stability = 1.0 / (1.0 + growth_std / 100000.0)
-
-            # --- F. Single Viral Penalty ---
-            if video_count == 1:
-                penalty = 0.25
-            elif video_count == 2:
-                penalty = 0.50
+            # Hitung mean absolute growth untuk CV
+            mean_abs_growth = sum(abs(g) for g in growth_values) / len(growth_values) if growth_values else 0
+            if mean_abs_growth > 0:
+                cv = growth_std / mean_abs_growth  # Coefficient of Variation
             else:
-                penalty = 1.0
+                cv = 0
+            stability = 1.0 / (1.0 + cv)
+
+                        # --- F. Single Viral Penalty ---
+            # Penalty smooth: berdasarkan video_count DAN creator_count
+            # 1 vid/1 cr = 0.40, 2 vid/1 cr = 0.60, 2 vid/2 cr = 0.80, 3+ vid = 1.0
+            base_penalty = min(video_count / 3.0, 1.0)
+            creator_boost = min(creator_count / 2.0, 1.0)
+            penalty = base_penalty * 0.6 + creator_boost * 0.4
+            penalty = max(penalty, 0.4)
 
             # --- G. Growth Score dengan Exposure Factor ---
             exposure_factor = math.log(video_count + 1)
             safe_growth = max(avg_weighted_growth, 0)
             growth_score = math.sqrt(safe_growth) * exposure_factor
 
-            # --- H. Momentum Score ---
+                        # --- H. Momentum Score ---
             momentum_score = (
                 growth_score * 0.45
                 + confidence * 100 * 0.20
@@ -329,14 +347,37 @@ class ProductMomentumAnalyzer:
                 + avg_konsistensi * 100 * 0.10
                 + stability * 100 * 0.10
             )
-            # Terapkan penalty untuk single video
+            # Simpan raw_score sebelum penalty
+            raw_score = momentum_score
+            # Terapkan penalty untuk produk dengan sedikit video/creator
             momentum_score = momentum_score * penalty
 
-            # --- I. Discovery Score ---
+            # Breakdown untuk explainability (debugging)
+            score_breakdown = {
+                "growth_pct": round(growth_score * 0.45, 2),
+                "confidence_pct": round(confidence * 100 * 0.20, 2),
+                "creator_pct": round(creator_factor * 100 * 0.15, 2),
+                "consistency_pct": round(avg_konsistensi * 100 * 0.10, 2),
+                "stability_pct": round(stability * 100 * 0.10, 2),
+                "raw_score": round(raw_score, 2),
+                "penalty": round(penalty, 2),
+                "final_score": round(momentum_score, 2),
+            }
+
+                        # --- I. Discovery Score ---
+            # Discovery = growth_potential * (1 - confidence*0.7) * consistency * creator_diversity
+            # (1 - confidence*0.7) agar produk established tetap bisa punya discovery non-zero
+            # Creator diversity: lebih dari 1 creator = lebih terpercaya
+            if video_count > 0:
+                creator_ratio = creator_count / video_count
+                creator_diversity = min(creator_ratio * 3.0, 1.0)
+            else:
+                creator_diversity = 0.0
             discovery_score = (
                 growth_score
-                * (1 - confidence)
+                * (1 - confidence * 0.7)  # Max discount 70%, bukan 100%
                 * (0.5 + avg_konsistensi)
+                * (0.5 + creator_diversity * 0.5)  # Range: 0.5 (1 creator) - 1.0 (banyak creator)
             )
 
             # --- Statistik View tambahan ---
@@ -380,6 +421,7 @@ class ProductMomentumAnalyzer:
                 "tiktok_id_product": pdata.get("tiktok_id_product"),
                 "momentum_score": round(momentum_score, 2),
                 "discovery_score": round(discovery_score, 2),
+                "score_breakdown": score_breakdown,
                 "avg_growth": round(avg_weighted_growth),
                 "videos": video_count,
                 "creators": creator_count,
@@ -455,7 +497,7 @@ class ProductMomentumAnalyzer:
     def build_chart_data(self):
         """Menyiapkan data untuk grafik."""
         if not self.hasil:
-            self.chart_data = ChartData()
+            self.chart_data = empty_chart_data()
             return self.chart_data
 
         # Urutkan berdasarkan momentum
