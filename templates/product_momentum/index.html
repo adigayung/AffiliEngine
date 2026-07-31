@@ -295,6 +295,64 @@
 </div>
 
 <!-- ============================================================ -->
+<!-- TABEL AVERAGE VIEW PER PRODUK                                 -->
+<!-- ============================================================ -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="ti ti-eye me-2"></i>
+            Average View per Produk
+        </h3>
+        <div class="card-actions">
+            <span class="text-muted small d-none d-md-inline" title="Rata-rata view seluruh video per produk. Setiap video dihitung hanya sekali menggunakan snapshot view terbarunya (snapshot_time paling baru).">
+                <i class="ti ti-info-circle me-1"></i>
+                Dihitung dari snapshot view terbaru setiap video
+            </span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table table-hover align-middle mb-0" id="avgViewTable">
+            <thead>
+                <tr>
+                    <th width="40" class="text-center ps-3">#</th>
+                    <th>Produk</th>
+                    <th width="140" class="text-center">Jumlah Video</th>
+                    <th width="110" class="text-center" title="Jumlah video yang masih dijadwalkan upload (status uploaded, jadwal publish masih di masa depan / belum tayang di TikTok).">Scheduled</th>
+                    <th width="160" class="text-center">Total View</th>
+                    <th width="160" class="text-center">Average View</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in avg_view_per_product %}
+                <tr>
+                    <td class="text-center ps-3"><span class="text-muted">{{ loop.index }}</span></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="/product/{{ item.tiktok_id_product }}" class="flex-shrink-0">
+                                <img src="/static/products/{{ item.tiktok_id_product }}/product/1.jpg"
+                                     onerror="this.onerror=null;this.src='/static/products/no_product.jpg'"
+                                     alt="{{ item.product_name }}"
+                                     class="rounded"
+                                     style="width: 40px; height: 40px; object-fit: cover;"
+                                     loading="lazy">
+                            </a>
+                            <a href="/product/{{ item.tiktok_id_product }}" class="text-reset text-decoration-none">
+                                <span class="fw-medium" title="{{ item.product_name }}">{{ item.product_name.split()[:4]|join(' ') }}{% if item.product_name.split()|length > 4 %}...{% endif %}</span>
+                            </a>
+                        </div>
+                    </td>
+                    <td class="text-center fw-bold text-green">{{ item.jumlah_video }}</td>
+                    <td class="text-center fw-bold text-orange">{{ item.scheduled }}</td>
+                    <td class="text-center fw-semibold">{{ "{:,}".format(item.total_view) }}</td>
+                    <td class="text-center fw-bold text-primary">{{ "{:,}".format(item.average_view) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================================ -->
 <!-- TABEL DETAIL                                                  -->
 <!-- ============================================================ -->
 <div class="card">
@@ -439,7 +497,8 @@
 .sortable:hover {
     color: var(--tblr-primary, #206bc4);
 }
-#detailTable thead th {
+#detailTable thead th,
+#avgViewTable thead th {
     background-color: #f8fafc;
     border-bottom: 2px solid #dce1e7;
     padding-top: 0.6rem;
@@ -452,13 +511,16 @@
     white-space: nowrap;
     user-select: none;
 }
-#detailTable tbody tr {
+#detailTable tbody tr,
+#avgViewTable tbody tr {
     transition: background-color 0.15s ease;
 }
-#detailTable tbody tr:hover {
+#detailTable tbody tr:hover,
+#avgViewTable tbody tr:hover {
     background-color: rgba(32, 107, 196, 0.04);
 }
-#detailTable td {
+#detailTable td,
+#avgViewTable td {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     vertical-align: middle;
@@ -492,10 +554,12 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    #detailTable {
+    #detailTable,
+    #avgViewTable {
         font-size: 0.75rem;
     }
-    #detailTable th, #detailTable td {
+    #detailTable th, #detailTable td,
+    #avgViewTable th, #avgViewTable td {
         padding-left: 0.3rem !important;
         padding-right: 0.3rem !important;
     }

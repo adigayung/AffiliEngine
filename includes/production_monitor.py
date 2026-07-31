@@ -242,6 +242,11 @@ def get_creator_status():
     Semua creator aktif dengan Priority Score.
     Diurutkan dari score tertinggi (paling prioritas).
 
+    Setiap creator menyertakan avg_view: rata-rata view per video
+    (snapshot view terbaru per video) untuk video yang di-upload dalam
+    30 hari terakhir termasuk hari ini. Bernilai 0 jika creator belum
+    memiliki video dalam periode tersebut.
+
     Returns:
         list[dict]
     """
@@ -274,9 +279,31 @@ def get_creator_status():
                     END) AS upload_berikutnya,
                     COUNT(DISTINCT CASE
                         WHEN uj.status = 'failed' THEN uj.id
-                    END) AS upload_gagal
+                    END) AS upload_gagal,
+                    COALESCE(av.jml_video_30d, 0) AS jml_video_30d,
+                    COALESCE(av.total_view_30d, 0) AS total_view_30d
                 FROM creators c
                 LEFT JOIN upload_jobs uj ON uj.creator_id = c.id
+                LEFT JOIN (
+                    -- Avg View per creator: video dalam 30 hari terakhir (termasuk hari ini)
+                    -- Setiap video dihitung SATU KALI via snapshot view terbaru (MAX(snapshot_time))
+                    SELECT
+                        v.creator_id,
+                        COUNT(DISTINCT v.id) AS jml_video_30d,
+                        SUM(s.views) AS total_view_30d
+                    FROM tiktok_videos v
+                    INNER JOIN tiktok_video_stats s ON s.video_id = v.id
+                    INNER JOIN (
+                        SELECT video_id, MAX(snapshot_time) AS max_snapshot
+                        FROM tiktok_video_stats
+                        GROUP BY video_id
+                    ) latest
+                        ON latest.video_id = s.video_id
+                        AND latest.max_snapshot = s.snapshot_time
+                    WHERE v.upload_time >= CURDATE() - INTERVAL 29 DAY
+                      AND v.upload_time <  CURDATE() + INTERVAL 1 DAY
+                    GROUP BY v.creator_id
+                ) av ON av.creator_id = c.id
                 WHERE c.is_active = 1
                 GROUP BY c.id, c.username, c.display_name, c.profile_image
             """, (now,))
@@ -302,6 +329,11 @@ def get_creator_status():
                 rentang_full = 0
                 progress_persen = 0
 
+            # Avg View 30 hari terakhir (snapshot view terbaru per video)
+            jml_video_30d = row["jml_video_30d"] or 0
+            total_view_30d = row["total_view_30d"] or 0
+            avg_view_30d = round(total_view_30d / jml_video_30d) if jml_video_30d > 0 else 0
+
             results.append({
                 "id": row["id"],
                 "username": row["username"],
@@ -318,6 +350,7 @@ def get_creator_status():
                 "priority_score": priority_score,
                 "rentang_hari": rentang_full,
                 "progress_persen": progress_persen,
+                "avg_view": avg_view_30d,
             })
 
         results.sort(key=lambda x: x["priority_score"], reverse=True)

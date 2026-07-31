@@ -44,6 +44,7 @@ def index():
                 "category": {"labels": [], "data": [], "colors": {}},
             },
             "total_products": 0,
+            "avg_view_per_product": [],
             "error": str(e),
         }
 
@@ -56,7 +57,11 @@ def index():
         all_results=results.get("all_results", [])[:10],
         chart_data=results.get("chart_data", {}),
         total_products=results.get("total_products", 0),
-        has_data=len(results.get("all_results", [])) > 0,
+        avg_view_per_product=results.get("avg_view_per_product", []),
+        has_data=(
+            len(results.get("all_results", [])) > 0
+            or len(results.get("avg_view_per_product", [])) > 0
+        ),
     )
 
 

@@ -10,7 +10,10 @@ import statistics
 import logging
 from datetime import datetime
 
-from includes.mysql import get_product_momentum_data
+from includes.mysql import (
+    get_product_momentum_data,
+    get_product_avg_view_stats,
+)
 from includes.product_momentum.models import (
     ProductSummary,
     ChartData,
@@ -168,6 +171,7 @@ class ProductMomentumAnalyzer:
         self.hasil = []
         self.summary = None
         self.chart_data = None
+        self.avg_view_stats = []
 
     # ---------------------------------------------------------------
     # COLLECT DATA
@@ -185,6 +189,19 @@ class ProductMomentumAnalyzer:
         self.raw_data = get_product_momentum_data()
         logger.info(f"Data terkumpul: {len(self.raw_data)} record video")
         return self.raw_data
+
+    def collect_avg_view_stats(self):
+        """
+        Mengambil statistik rata-rata view per produk langsung dari
+        database (GROUP BY + aggregate). Creator tidak menjadi pembeda;
+        hanya produk yang menjadi pengelompokan. Setiap video hanya
+        dihitung sekali menggunakan snapshot view terbarunya.
+
+        Returns:
+            list[dict]: Data avg view per produk, urut Average View DESC
+        """
+        self.avg_view_stats = get_product_avg_view_stats()
+        return self.avg_view_stats
 
     # ---------------------------------------------------------------
     # PROSES DATA MENTAH -> PRODUK_DATA
@@ -600,6 +617,9 @@ class ProductMomentumAnalyzer:
         # 6. Build Chart Data
         self.build_chart_data()
 
+        # 7. Collect Avg View Per Product (tabel baru)
+        self.collect_avg_view_stats()
+
         return self.get_results()
 
     # ---------------------------------------------------------------
@@ -624,6 +644,7 @@ class ProductMomentumAnalyzer:
             "all_results": self.hasil,
             "chart_data": self.chart_data._asdict() if self.chart_data else {},
             "total_products": len(self.hasil),
+            "avg_view_per_product": self.avg_view_stats,
         }
 
 

@@ -1537,6 +1537,112 @@ def get_product_momentum_summary_stats():
         conn.close()
 
 
+def get_product_avg_view_stats():
+    """
+    Mengambil rata-rata view per produk berdasarkan video yang
+    di-upload dalam 60 HARI TERAKHIR (termasuk hari ini) dari seluruh
+    creator (creator tidak menjadi pembeda).
+
+    Video yang berumur 61 hari atau lebih DIABAIKAN SEPENUHNYA agar
+    performa historis lama ("hantu masa lalu") tidak lagi mempengaruhi
+    angka. Video viral yang masih berada dalam jendela relevansi 60
+    hari tetap dihitung.
+
+    Perhitungan dilakukan di database (GROUP BY + aggregate):
+        - Jumlah Video  = COUNT video yang ter-match ke produk
+        - Scheduled     = COUNT upload_jobs yang masih terjadwal
+                          (status='uploaded', schedule_datetime > NOW())
+                          untuk produk yang sama
+        - Total View    = SUM snapshot view TERBARU setiap video
+        - Average View  = Total View / Jumlah Video
+
+    Setiap video hanya dihitung SATU KALI menggunakan record
+    tiktok_video_stats dengan snapshot_time paling baru
+    (MAX(snapshot_time)). History tidak pernah dijumlahkan.
+
+    Returns:
+        list[dict]: Daftar per produk, urut Average View DESC:
+            {
+                "product_id": int,
+                "tiktok_id_product": str,
+                "product_name": str,
+                "jumlah_video": int,
+                "scheduled": int,
+                "total_view": int,
+                "average_view": int,
+            }
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    p.id AS product_id,
+                    p.tiktok_id_product,
+                    p.title AS product_name,
+                    COUNT(DISTINCT v.id) AS jumlah_video,
+                    COALESCE(sched.scheduled, 0) AS scheduled,
+                    COALESCE(SUM(s.views), 0) AS total_view,
+                    ROUND(
+                        COALESCE(SUM(s.views), 0) / COUNT(DISTINCT v.id),
+                        0
+                    ) AS average_view
+                FROM tiktok_videos v
+                INNER JOIN upload_jobs uj ON v.upload_job_id = uj.id
+                INNER JOIN tiktok_products p ON uj.product_id = p.tiktok_id_product
+                INNER JOIN tiktok_video_stats s ON s.video_id = v.id
+                INNER JOIN (
+                    SELECT video_id, MAX(snapshot_time) AS max_snapshot
+                    FROM tiktok_video_stats
+                    GROUP BY video_id
+                ) latest
+                    ON latest.video_id = s.video_id
+                    AND latest.max_snapshot = s.snapshot_time
+                LEFT JOIN (
+                    -- Jumlah video yang masih terjadwal upload per produk
+                    SELECT
+                        p2.tiktok_id_product,
+                        COUNT(*) AS scheduled
+                    FROM upload_jobs uj2
+                    INNER JOIN tiktok_products p2
+                        ON uj2.product_id = p2.tiktok_id_product
+                    WHERE uj2.status = 'uploaded'
+                      AND uj2.schedule_datetime > NOW()
+                      AND uj2.product_id IS NOT NULL
+                      AND p2.title IS NOT NULL AND p2.title != ''
+                    GROUP BY p2.tiktok_id_product
+                ) sched
+                    ON sched.tiktok_id_product = p.tiktok_id_product
+                WHERE uj.product_id IS NOT NULL
+                  AND p.title IS NOT NULL AND p.title != ''
+                  -- Hanya video yang di-upload dalam 60 hari terakhir (termasuk hari ini)
+                  AND v.upload_time >= CURDATE() - INTERVAL 59 DAY
+                  AND v.upload_time <  CURDATE() + INTERVAL 1 DAY
+                GROUP BY p.id, p.tiktok_id_product, p.title
+                ORDER BY average_view DESC, total_view DESC
+            """
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+            result = []
+            for row in rows:
+                result.append({
+                    "product_id": row["product_id"],
+                    "tiktok_id_product": row["tiktok_id_product"],
+                    "product_name": row["product_name"],
+                    "jumlah_video": int(row["jumlah_video"] or 0),
+                    "scheduled": int(row["scheduled"] or 0),
+                    "total_view": int(row["total_view"] or 0),
+                    "average_view": int(row["average_view"] or 0),
+                })
+            return result
+    except Exception as e:
+        print(f"get_product_avg_view_stats() error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
 
 # =============================================================================
 # BACKWARD COMPATIBILITY - Fungsi lama (masih dipanggil oleh matching engine)

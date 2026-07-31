@@ -278,6 +278,12 @@
                                 <div class="text-muted small">Terjadwal</div>
                                 <div class="h4 mb-0 text-info">{{ creator.video_terjadwal }}</div>
                             </div>
+
+                            <div class="col-4">
+                                <div class="text-muted small">Avg View 30d</div>
+                                <div class="h4 mb-0 text-primary">{{ creator.avg_view }}</div>
+                            </div>
+                            
                             <div class="col-4">
                                 <div class="text-muted small">Sisa Hari</div>
                                 <div class="h4 mb-0 {% if creator.sisa_hari < 3 %}text-danger{% elif creator.sisa_hari < 7 %}text-orange{% endif %}">
