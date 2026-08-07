@@ -37,7 +37,7 @@ def video_analytics_update(creator_id):
     Router hanya sebagai coordinator. Business logic ada di
     includes.video_analytics.video_analytics.update_creator_analytics()
     """
-    max_videos = 30
+    max_videos = 60
     result = update_creator_analytics(creator_id, max_videos)
 
     # Lakukan video-job matching hanya jika update analytics berhasil
