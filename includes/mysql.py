@@ -724,6 +724,44 @@ def save_upload_job(
         conn.close()
 
 # =========================
+# DELETE UPLOAD JOB
+# =========================
+
+def delete_upload_job(job_id):
+
+    connection = get_connection()
+
+    try:
+
+        with connection.cursor() as cursor:
+
+            sql = """
+                DELETE
+                FROM upload_jobs
+                WHERE id = %s
+                LIMIT 1
+            """
+
+            cursor.execute(sql, (job_id,))
+
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    except Exception as e:
+
+        connection.rollback()
+
+        print(f"delete_upload_job() : {e}")
+
+        return False
+
+    finally:
+
+        connection.close()
+
+
+# =========================
 # SAVE SCHEDULE BATCH
 # =========================
 

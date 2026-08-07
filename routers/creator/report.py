@@ -1,7 +1,11 @@
-from flask import Blueprint, render_template, abort
-from includes.mysql import get_connection, get_creator
-from collections import OrderedDict
 import datetime
+import os
+import re
+import shutil
+
+from flask import Blueprint, render_template, abort, jsonify, request
+from includes.mysql import get_connection, get_creator, delete_upload_job
+from collections import OrderedDict
 
 creator_report_bp = Blueprint(
     "creator_report",
@@ -45,6 +49,17 @@ def _get_folder_name(full_path):
     path = full_path.replace("\\", "/")
     parts = path.rstrip("/").split("/")
     return parts[-1] if parts else full_path
+
+
+_SCHEDULE_FOLDER_PATTERN = re.compile(r"^\d{4}_\d{2}_\d{2}_\d{2}_\d{2}$")
+
+
+def _is_schedule_folder(path):
+    """Cek apakah path menunjuk ke folder schedule (leaf %Y_%m_%d_%H_%M)."""
+    if not path:
+        return False
+    leaf = os.path.basename(path.rstrip("\\/"))
+    return bool(_SCHEDULE_FOLDER_PATTERN.match(leaf))
 
 
 def _compute_display_status(db_status, schedule_datetime, now):
@@ -253,9 +268,15 @@ def get_creator_upload_schedule(creator_id: int):
         # ==============================
         # BUILD UPLOAD ITEM (siap render)
         # ==============================
+        schedule_display = (
+            f"{sched_dt.day} {NAMA_BULAN_MAP.get(sched_dt.month, sched_dt.month)} "
+            f"{sched_dt.year} {jam_str}"
+        )
+
         upload_item = {
             "jam_upload": jam_str,
             "schedule_datetime": sched_formatted,
+            "schedule_display": schedule_display,
             "product_name": product_title,
             "product_id": row.get("product_id"),
             "product_url": product_url,
@@ -265,6 +286,8 @@ def get_creator_upload_schedule(creator_id: int):
             "status_badge_icon": badge_icon,
             "status_badge_label": badge_label,
             "folder_name": folder_name,
+            "folder_path": row.get("folder") or "",
+            "upload_job_id": row.get("id"),
             "retry_count": row.get("retry_count", 0),
             "uploaded_at": uploaded_at_formatted,
         }
@@ -364,3 +387,67 @@ def creator_report(creator_id):
         page_title=f"Upload Schedule - {creator.get('display_name', creator.get('username', 'Unknown'))}",
         report_data=data
     )
+
+
+@creator_report_bp.route("/<int:creator_id>/report/remove_schedule", methods=["POST"])
+def remove_schedule(creator_id):
+    """
+    Hapus schedule upload (record database + folder schedule di disk).
+
+    Proses:
+    1. Validasi upload job milik creator.
+    2. Hapus record upload_jobs dari database.
+    3. Hapus folder schedule secara recursive (hanya folder schedule yang valid).
+    """
+    payload = request.get_json(silent=True) or {}
+    job_id = payload.get("job_id")
+
+    if not job_id:
+        return jsonify({"success": False, "message": "job_id tidak ditemukan."})
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, folder
+                FROM upload_jobs
+                WHERE id = %s AND creator_id = %s
+                LIMIT 1
+                """,
+                (job_id, creator_id)
+            )
+            row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return jsonify({"success": False, "message": "Upload job tidak ditemukan."})
+
+    folder = row.get("folder") or ""
+
+    # 1. Hapus record database
+    if not delete_upload_job(job_id):
+        return jsonify({"success": False, "message": "Gagal menghapus data schedule dari database."})
+
+    # 2. Hapus folder schedule dari disk (recursive)
+    notes = []
+    if folder:
+        if not os.path.isdir(folder):
+            notes.append("Folder schedule sudah tidak ada di disk.")
+        elif not _is_schedule_folder(folder):
+            notes.append("Folder tidak dihapus karena bukan folder schedule yang valid.")
+        else:
+            try:
+                shutil.rmtree(folder)
+            except Exception as e:
+                return jsonify({
+                    "success": False,
+                    "message": "Data schedule terhapus, tetapi gagal menghapus folder: " + str(e)
+                })
+
+    message = "Schedule berhasil dihapus."
+    if notes:
+        message += " " + " ".join(notes)
+
+    return jsonify({"success": True, "message": message})
