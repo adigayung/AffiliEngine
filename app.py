@@ -5,6 +5,9 @@ from flask_sock import Sock
 from includes.config_loader import get_app_config
 from includes.websocket import sock
 from includes.mysql import get_creator_list, get_creator
+import os
+import webbrowser
+from threading import Timer
 
 config = get_app_config()
 
@@ -75,7 +78,15 @@ def inject_creator():
 
     }
 
+def open_browser(URL):
+    webbrowser.open(URL)
+
 if __name__ == "__main__":
+    url = f"http://127.0.0.1:{config['port']}"
+
+    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        Timer(5, open_browser, args=(url,)).start()
+
     app.run(
         host=config["host"],
         port=config["port"],
