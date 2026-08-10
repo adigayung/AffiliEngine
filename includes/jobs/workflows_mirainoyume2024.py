@@ -65,7 +65,7 @@ jobs_json = [
 {
     "id": 5,
     "cmd": "click",
-    "delay": 1000,
+    "delay": 3000,
     "status": "pending",
     "keterangan": "Pilih Tab video",
     "data": {
@@ -79,7 +79,35 @@ jobs_json = [
 {
     "id": 6,
     "cmd": "click",
-    "delay": 1000,
+    "delay": 3000,
+    "status": "pending",
+    "keterangan": "Pilih video yang akan di upload",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 170,
+            "y": 540
+        }
+    }
+},
+{
+    "id": 8,
+    "cmd": "click",
+    "delay": 3000,
+    "status": "pending",
+    "keterangan": "back dulu, anti bug",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 776,
+            "y": 2336
+        }
+    }
+},
+{
+    "id": 6,
+    "cmd": "click",
+    "delay": 3000,
     "status": "pending",
     "keterangan": "Pilih video yang akan di upload",
     "data": {
@@ -107,14 +135,42 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 2500,
+    "delay": 3000,
     "status": "pending",
     "keterangan": "tekan 'Berikutnya' Lagi",
     "data": {
         "target": {
             "type": "point",
-            "x": 779,
-            "y": 2159
+            "x": 787,
+            "y": 2164
+        }
+    }
+},
+{
+    "id": 8,
+    "cmd": "click",
+    "delay": 3000,
+    "status": "pending",
+    "keterangan": "back dulu, anti bug",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 776,
+            "y": 2336
+        }
+    }
+},
+{
+    "id": 8,
+    "cmd": "click",
+    "delay": 3000,
+    "status": "pending",
+    "keterangan": "tekan 'Berikutnya' Lagi",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 787,
+            "y": 2164
         }
     }
 },
