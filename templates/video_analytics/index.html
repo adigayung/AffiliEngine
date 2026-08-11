@@ -374,6 +374,24 @@
 </div>
 
 <!-- ============================================================ -->
+<!-- 3A. VIEW HARIAN — 45 HARI TERAKHIR                          -->
+<!-- ============================================================ -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="ti ti-chart-line me-2"></i>
+            View Harian — 45 Hari Terakhir
+        </h3>
+        <div class="card-subtitle text-muted small ms-3">
+            Total view harian creator berdasarkan pertumbuhan views antar snapshot
+        </div>
+    </div>
+    <div class="card-body">
+        <canvas id="dailyViewsChart" height="280"></canvas>
+    </div>
+</div>
+
+<!-- ============================================================ -->
 <!-- 3B. RISING VIDEOS — Last 3 Days                              -->
 <!-- ============================================================ -->
 <div class="card mb-4">
@@ -1139,6 +1157,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
             });
         }
+    }
+
+    // --- View Harian 45 Hari (creator terpilih) ---
+    var dailyViewsData = {{ daily_views_chart | tojson | safe if daily_views_chart else '{"labels": [], "datasets": []}' }};
+    var dailyCtx = document.getElementById('dailyViewsChart');
+    if (dailyCtx && dailyViewsData && dailyViewsData.labels && dailyViewsData.labels.length > 0) {
+        var dailyLabels = dailyViewsData.labels.map(function(d) {
+            var p = d.split('-');
+            return parseInt(p[2], 10) + ' ' + (months[parseInt(p[1], 10)] || p[1]);
+        });
+        var dailyDatasets = (dailyViewsData.datasets || []).map(function(ds) {
+            return {
+                label: ds.label || 'Total Views',
+                data: ds.data || [],
+                borderColor: '#206bc4',
+                backgroundColor: '#206bc418',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                tension: 0.3,
+                fill: true,
+            };
+        });
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: { labels: dailyLabels, datasets: dailyDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) {
+                                return dailyViewsData.labels[items[0].dataIndex];
+                            },
+                            label: function(context) {
+                                return 'Total Views: ' + context.parsed.y.toLocaleString();
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
     }
 
     // --- Update Analytics button ---

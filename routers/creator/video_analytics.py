@@ -130,6 +130,11 @@ def video_analytics(creator_id):
     data["rising_videos"] = rising_videos
 
     # ==============================
+    # GRAFIK VIEW HARIAN — 45 HARI (creator ini saja)
+    # ==============================
+    data["daily_views_chart"] = video_analytics_service.get_creator_daily_views_chart(creator_id)
+
+    # ==============================
     # RENDER TEMPLATE
     # ==============================
     return render_template(

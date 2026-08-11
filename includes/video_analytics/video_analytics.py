@@ -18,7 +18,7 @@ TIDAK menangani:
     - Background job
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from includes.mysql import get_connection, get_creator
 from includes.mysql import upsert_tiktok_video, upsert_video_daily_stats
 from includes.tiktok_scrape_videos import TikTokScraper
@@ -604,6 +604,139 @@ class VideoAnalyticsService:
         except Exception as e:
             logger(ERROR, f"{LOG_PREFIX} ERROR get_rising_videos: {e}")
             return []
+
+    def get_creator_daily_views_chart(self, creator_id: int, days: int = 45) -> dict:
+        """
+        Grafik View Harian 45 hari untuk SATU creator.
+
+        Algoritma SAMA dengan get_creator_analytics_chart() di
+        includes/production_monitor.py (pola view growth/delta):
+
+            - tiktok_video_stats.views bersifat CUMULATIVE (lifetime views
+              pada saat snapshot), BUKAN penambahan per interval.
+            - Untuk setiap (video_id, tanggal) diambil SATU snapshot terakhir
+              (MAX(snapshot_time)) — dedup harian (pola uk_video_snapshot).
+            - Baseline = snapshot view terakhir SEBELUM start_date per video
+              (jika tersedia), agar delta pada hari pertama periode 45 hari
+              dapat dihitung dengan benar.
+            - daily_view(video, D) = views(latest D) - views(observasi
+              sebelumnya), dengan proteksi max(0, delta) terhadap nilai negatif.
+            - Total creator per tanggal = SUM delta seluruh video creator tsb.
+
+        Creator difilter di QUERY (WHERE v.creator_id = %s), bukan di frontend.
+
+        Args:
+            creator_id: ID creator dari tabel creators
+            days: Jumlah hari (default 45, hari ini termasuk)
+
+        Returns:
+            dict: {
+                "labels": [str "YYYY-MM-DD" x45],
+                "datasets": [{"label": "Total Views", "data": [int x45]}],
+            }
+        """
+        today = datetime.now().date()
+        start_date = today - timedelta(days=days - 1)  # hari ini - (days-1)
+        end_date = today
+        end_plus = end_date + timedelta(days=1)        # exclusive upper bound
+
+        # 45 tanggal lengkap (hari ini WAJIB termasuk, missing date tetap 0)
+        dates = []
+        d = start_date
+        while d <= end_date:
+            dates.append(d)
+            d += timedelta(days=1)
+
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
+                    # ============ STEP 1: LATEST SNAPSHOT per (video_id, tanggal) ============
+                    # Satu snapshot TERAKHIR per video per hari (dedup), khusus creator ini.
+                    cursor.execute("""
+                        SELECT
+                            v.creator_id,
+                            DATE(s.snapshot_time) AS tgl,
+                            s.video_id,
+                            s.views
+                        FROM tiktok_video_stats s
+                        INNER JOIN (
+                            SELECT
+                                video_id,
+                                DATE(snapshot_time) AS tgl,
+                                MAX(snapshot_time) AS max_ts
+                            FROM tiktok_video_stats
+                            WHERE snapshot_time >= %s AND snapshot_time < %s
+                            GROUP BY video_id, DATE(snapshot_time)
+                        ) daily
+                            ON daily.video_id = s.video_id
+                           AND daily.tgl = DATE(s.snapshot_time)
+                           AND daily.max_ts = s.snapshot_time
+                        INNER JOIN tiktok_videos v ON s.video_id = v.id
+                        WHERE v.creator_id = %s
+                        ORDER BY s.video_id, s.snapshot_time
+                    """, (start_date, end_plus, creator_id))
+                    daily_rows = cursor.fetchall()
+
+                    # ============ STEP 0: BASELINE sebelum start_date (per video) ============
+                    # Snapshot view terakhir SEBELUM rentang, untuk delta observasi pertama.
+                    cursor.execute("""
+                        SELECT s.video_id, s.views
+                        FROM tiktok_video_stats s
+                        INNER JOIN (
+                            SELECT video_id, MAX(snapshot_time) AS max_ts
+                            FROM tiktok_video_stats
+                            WHERE snapshot_time < %s
+                            GROUP BY video_id
+                        ) latest
+                            ON latest.video_id = s.video_id
+                           AND latest.max_ts = s.snapshot_time
+                        INNER JOIN tiktok_videos v ON s.video_id = v.id
+                        WHERE v.creator_id = %s
+                    """, (start_date, creator_id))
+                    baseline_map = {
+                        r["video_id"]: int(r["views"] or 0)
+                        for r in cursor.fetchall()
+                    }
+            finally:
+                conn.close()
+        except Exception as e:
+            logger(ERROR, f"{LOG_PREFIX} ERROR get_creator_daily_views_chart "
+                          f"(creator {creator_id}): {e}")
+            return {
+                "labels": [d.strftime("%Y-%m-%d") for d in dates],
+                "datasets": [{"label": "Total Views", "data": [0] * len(dates)}],
+            }
+
+        # Map per video: {video_id: {tanggal: views}} dari SATU snapshot terakhir/hari
+        daily_value = {}
+        for r in daily_rows:
+            vid = r["video_id"]
+            if vid not in daily_value:
+                daily_value[vid] = {}
+            daily_value[vid][r["tgl"]] = int(r["views"] or 0)
+
+        # ============ HITUNG VIEW HARIAN (DELTA) per VIDEO, SUM per tanggal ============
+        total_delta_map = {}
+        for vid, m in daily_value.items():
+            prev_val = None
+            for d in sorted(m):
+                cur_val = m[d]
+                if prev_val is None:
+                    base = baseline_map.get(vid)
+                    delta = max(0, cur_val - base) if base is not None else 0
+                else:
+                    delta = max(0, cur_val - prev_val)
+                prev_val = cur_val
+                total_delta_map[d] = total_delta_map.get(d, 0) + delta
+
+        # Series 45 nilai (tanggal tanpa data = 0)
+        series = [int(total_delta_map.get(d, 0)) for d in dates]
+
+        return {
+            "labels": [d.strftime("%Y-%m-%d") for d in dates],
+            "datasets": [{"label": "Total Views", "data": series}],
+        }
 
     def _empty_analytics(self) -> dict:
         """
