@@ -6,6 +6,7 @@ from includes.production_monitor import (
     get_creator_status,
     get_active_batches,
     get_failed_uploads,
+    get_creator_analytics_chart,
 )
 
 dashboard_bp = Blueprint(
@@ -26,6 +27,7 @@ def dashboard():
     all_creators = get_creator_status()
     active_batches = get_active_batches()
     failed_uploads = get_failed_uploads()
+    chart_45_hari = get_creator_analytics_chart()
 
     return render_template(
         "production_monitor/index.html",
@@ -38,4 +40,5 @@ def dashboard():
         all_creators=all_creators,
         active_batches=active_batches,
         failed_uploads=failed_uploads,
+        chart_45_hari=chart_45_hari,
     )

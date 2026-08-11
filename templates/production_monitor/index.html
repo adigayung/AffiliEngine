@@ -384,6 +384,44 @@
 </div>
 
 <!-- ================================================================== -->
+<!-- PANEL 4B: ANALITIK 45 HARI                                       -->
+<!-- ================================================================== -->
+<div class="row row-deck row-cards g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-chart-bar me-2"></i>
+                    Total View Semua Creator — 45 Hari Terakhir
+                </h3>
+                <div class="card-subtitle text-muted small ms-3">
+                    Total view seluruh creator per hari selama 45 hari terakhir
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="chartTotalCreator" height="280"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="ti ti-chart-line me-2"></i>
+                    Total Views per Creator — 45 Hari Terakhir
+                </h3>
+                <div class="card-subtitle text-muted small ms-3">
+                    Total views harian setiap creator (snapshot harian)
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="chartCreatorViews" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================== -->
 <!-- PANEL 5: BATCH AKTIF                                              -->
 <!-- ================================================================== -->
 <div class="card mb-4">
@@ -508,4 +546,137 @@
     color: #206bc4;
 }
 </style>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS: Chart.js (Analitik 45 Hari)                         -->
+<!-- ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var chartData = {{ chart_45_hari | tojson | safe if chart_45_hari is defined else '{}' }};
+    if (!chartData || !chartData.dates || chartData.dates.length === 0) return;
+
+    // Format "YYYY-MM-DD" -> "28 Jun"
+    var months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function formatDates(dates) {
+        return dates.map(function(d) {
+            var p = d.split('-');
+            return parseInt(p[2], 10) + ' ' + (months[parseInt(p[1], 10)] || p[1]);
+        });
+        }
+    var labels = formatDates(chartData.dates);
+
+    // ============================================================
+    // GRAFIK 1: TOTAL VIEW SEMUA CREATOR — 45 HARI
+    // ============================================================
+    var ctx1 = document.getElementById('chartTotalCreator');
+    if (ctx1) {
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Views',
+                    data: chartData.total_views,
+                    borderColor: '#206bc4',
+                    backgroundColor: '#206bc418',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    tension: 0.3,
+                    fill: true,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) {
+                                return chartData.dates[items[0].dataIndex];
+                            },
+                            label: function(context) {
+                                return 'Total Views: ' + context.parsed.y.toLocaleString();
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    // ============================================================
+    // GRAFIK 2: SEMUA CREATOR — 45 HARI
+    // ============================================================
+    var ctx2 = document.getElementById('chartCreatorViews');
+    if (ctx2 && chartData.creators && chartData.creators.length > 0) {
+        var colors = ['#206bc4', '#2fb344', '#d63939', '#f59f00', '#17a2b8'];
+        var datasets = chartData.creators.map(function(c, i) {
+            var color = colors[i % colors.length];
+            return {
+                label: c.name,
+                data: c.data,
+                borderColor: color,
+                backgroundColor: color + '18',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                tension: 0.3,
+                fill: false,
+            };
+        });
+        new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, padding: 12, font: { size: 10 } },
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(items) {
+                                return chartData.dates[items[0].dataIndex];
+                            },
+                            label: function(context) {
+                                var label = context.dataset.label || '';
+                                return label + ': ' + context.parsed.y.toLocaleString() + ' views';
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(val) {
+                                if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                                if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+                                return val;
+                            },
+                        },
+                    },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
+    }
+});
+</script>
 {% endblock %}

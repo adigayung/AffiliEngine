@@ -2,7 +2,7 @@
 # Database layer untuk modul Monitor Produksi
 # Semua query SQL ada di sini, bukan di router atau template.
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from includes.mysql import get_connection
 
 
@@ -635,3 +635,228 @@ def get_failed_uploads():
         return results
     finally:
         conn.close()
+
+
+# ==============================
+# ANALITIK 45 HARI (GRAFIK)
+# ==============================
+
+HARI_ANALITIK = 45
+
+
+def get_creator_analytics_chart(days: int = HARI_ANALITIK):
+    """
+    Data untuk 2 grafik analitik 45 hari di Production Monitor.
+
+    1. Grafik 1 — Total View Semua Creator per hari:
+       Total view yang DIHASILKAN seluruh creator AKTIF pada setiap tanggal,
+       digabung menjadi SATU angka per hari.
+    2. Grafik 2 — View harian masing-masing creator:
+       Total view harian per creator, breakdown dari Grafik 1.
+       Setiap creator = satu line.
+
+    PENTING — KOREKSI OVERCOUNT (views bersifat CUMULATIVE):
+       tiktok_video_stats.views adalah total views AKUMULATIF sebuah video
+       pada saat snapshot (bukan penambahan view pada interval tersebut).
+       Oleh karena itu:
+
+       a) JANGAN menjumlahkan SEMUA row snapshot. Untuk setiap
+          (video_id + tanggal) dipilih SATU snapshot saja:
+          snapshot TERAKHIR pada hari tersebut (pola MAX(snapshot_time)
+          sama dengan query existing project di get_creator_status /
+          get_product_avg_view_stats / video analytics).
+          Unique index uk_video_snapshot (video_id, snapshot_time) + upsert
+          harian menjamin maksimal satu snapshot per scan, dan subquery
+          MAX(snapshot_time) menjamin satu nilai per (video, tanggal).
+
+       b) Nilai "view pada hari D" untuk sebuah video = selisih
+          (delta) snapshot terakhir hari D terhadap snapshot terakhir
+          observasi sebelumnya:
+              view_harian = views(latest D) - views(latest observasi < D)
+          Tanpa observasi sebelumnya -> 0.
+          Ini mengikuti pola existing project:
+              views_growth = views - prev if prev else 0
+          (includes/video_analytics/video_analytics.py) dan
+              views_growth = current_views - prev_views
+          (includes/mysql.py -> get_video_performance_list).
+
+       Dengan cara ini SUM views per hari TIDAK lagi mengakumulasi
+       lifetime views semua video (yang membuat grafik melonjak ke
+       puluhan-ribuan), melainkan hanya view yang benar-benar bertambah
+       pada hari tersebut (realita 1K-2K per hari).
+
+    SUMBER DATA:
+       tiktok_video_stats.views + tiktok_video_stats.snapshot_time,
+       relasi creator dari tiktok_videos.creator_id.
+       JOIN tiktok_video_stats -> tiktok_videos menggunakan s.video_id = v.id
+       (pola yang sama dengan query existing project).
+
+    Rentang tanggal INCLUSIVE: hari ini - (days-1) sampai hari ini.
+    Contoh: hari ini 2026-08-11 -> mulai 2026-06-28, total 45 tanggal.
+    Tanggal tanpa data TETAP diisi 0 (tidak ada tanggal yang dihilangkan).
+
+    Konsistensi WAJIB: untuk setiap tanggal,
+    total_views[tanggal] == SUM(data semua creator pada tanggal yang sama)
+    (keduanya dibangun dari kumpulan delta yang sama, sehingga pasti sama).
+
+    Returns:
+        dict: {
+            "dates": [str "YYYY-MM-DD" x45],
+            "total_views": [int x45],   -- Grafik 1
+            "creators": [
+                {"id": int, "name": str, "data": [int x45]},
+                ...
+            ],                          -- Grafik 2
+        }
+    """
+
+    today = get_now().date()
+    start_date = today - timedelta(days=days - 1)  # hari ini - 44 = 45 tanggal inclusive
+    end_date = today
+    end_plus = end_date + timedelta(days=1)        # exclusive upper bound
+
+    # Daftar 45 tanggal lengkap (hari ini WAJIB termasuk)
+    dates = []
+    d = start_date
+    while d <= end_date:
+        dates.append(d)
+        d += timedelta(days=1)
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # ============ STEP 1: LATEST SNAPSHOT per (video_id, tanggal) ============
+            # Satu snapshot TERAKHIR untuk setiap video per hari (dedup).
+            # Subquery MAX(snapshot_time) -> pola sama dengan existing project.
+            cursor.execute("""
+                SELECT
+                    v.creator_id,
+                    DATE(s.snapshot_time) AS tgl,
+                    s.video_id,
+                    s.views
+                FROM tiktok_video_stats s
+                INNER JOIN (
+                    SELECT
+                        video_id,
+                        DATE(snapshot_time) AS tgl,
+                        MAX(snapshot_time) AS max_ts
+                    FROM tiktok_video_stats
+                    WHERE snapshot_time >= %s AND snapshot_time < %s
+                    GROUP BY video_id, DATE(snapshot_time)
+                ) daily
+                    ON daily.video_id = s.video_id
+                   AND daily.tgl = DATE(s.snapshot_time)
+                   AND daily.max_ts = s.snapshot_time
+                INNER JOIN tiktok_videos v ON s.video_id = v.id
+                INNER JOIN creators c ON c.id = v.creator_id AND c.is_active = 1
+                ORDER BY s.video_id, s.snapshot_time
+            """, (start_date, end_plus))
+            daily_rows = cursor.fetchall()
+
+            # ============ STEP 0: BASELINE sebelum rentang (per video) ============
+            # Snapshot view terakhir SEBELUM start_date, untuk menghitung delta
+            # observasi pertama di dalam rentang (pola MAX(snapshot_time)).
+            cursor.execute("""
+                SELECT s.video_id, s.views
+                FROM tiktok_video_stats s
+                INNER JOIN (
+                    SELECT video_id, MAX(snapshot_time) AS max_ts
+                    FROM tiktok_video_stats
+                    WHERE snapshot_time < %s
+                    GROUP BY video_id
+                ) latest
+                    ON latest.video_id = s.video_id
+                   AND latest.max_ts = s.snapshot_time
+                INNER JOIN tiktok_videos v ON s.video_id = v.id
+                INNER JOIN creators c ON c.id = v.creator_id AND c.is_active = 1
+            """, (start_date,))
+            baseline_map = {
+                r["video_id"]: int(r["views"] or 0)
+                for r in cursor.fetchall()
+            }
+
+            # ============ DAFTAR CREATOR AKTIF (legend Grafik 2) ============
+            cursor.execute("""
+                SELECT id, username, display_name
+                FROM creators
+                WHERE is_active = 1
+                ORDER BY id ASC
+            """)
+            creator_rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    # ============ VALIDASI: SATU snapshot per (video_id, tanggal) ============
+    combo_count = len(daily_rows)
+    distinct_combos = len({(r["video_id"], r["tgl"]) for r in daily_rows})
+    if distinct_combos != combo_count:
+        print(
+            f"[ANALYTIK] PERINGATAN: {combo_count - distinct_combos} duplikat "
+            f"(video_id,tanggal) di daily snapshot -> hanya snapshot terakhir dipakai"
+        )
+
+    # Map per video: {video_id: {tanggal: views}} dari SATU snapshot terakhir
+    # per hari (daily_rows sudah dijamin satu baris per (video_id, tanggal)
+    # oleh subquery MAX(snapshot_time) di atas).
+    daily_value = {}
+    creator_of_video = {}
+    for r in daily_rows:
+        vid = r["video_id"]
+        creator_of_video[vid] = r["creator_id"]
+        if vid not in daily_value:
+            daily_value[vid] = {}
+        daily_value[vid][r["tgl"]] = int(r["views"] or 0)
+
+    # ============ HITUNG VIEW HARIAN (DELTA) per VIDEO ============
+    # views = total views AKUMULATIF -> view "pada hari D" = views(latest D)
+    # - views(latest observasi sebelumnya). Tanpa observasi sebelumnya -> 0
+    # (pola existing: views_growth = views - prev if prev else 0).
+    per_creator = {}      # creator_id -> {tanggal: total_delta}
+    total_delta_map = {}  # tanggal -> total_delta seluruh creator
+    for vid, m in daily_value.items():
+        prev_val = None
+        for d in sorted(m):
+            cur_val = m[d]
+            if prev_val is None:
+                base = baseline_map.get(vid)
+                delta = max(0, cur_val - base) if base is not None else 0
+            else:
+                delta = max(0, cur_val - prev_val)
+            prev_val = cur_val
+
+            cid = creator_of_video[vid]
+            if cid not in per_creator:
+                per_creator[cid] = {}
+            per_creator[cid][d] = per_creator[cid].get(d, 0) + delta
+            total_delta_map[d] = total_delta_map.get(d, 0) + delta
+
+    # Series Grafik 1 (45 nilai, tanggal tanpa data = 0)
+    total_views_series = [int(total_delta_map.get(d, 0)) for d in dates]
+
+    # Series per creator (45 nilai per creator, tanggal tanpa data = 0)
+    creators_series = []
+    for c in creator_rows:
+        name = c["display_name"] or c["username"] or f"Creator {c['id']}"
+        cid = c["id"]
+        data = [int(per_creator.get(cid, {}).get(d, 0)) for d in dates]
+        creators_series.append({"id": cid, "name": name, "data": data})
+
+    # ============ VALIDASI KONSISTENSI ============
+    # Chart 1 HARUS = penjumlahan seluruh line Chart 2 pada tanggal yang sama
+    # (keduanya dibangun dari per_creator yang sama -> pasti sama).
+    # Divalidasi dan otomatis dikoreksi jika menyimpang.
+    for i, d in enumerate(dates):
+        sum_chart2 = sum(c["data"][i] for c in creators_series)
+        if total_views_series[i] != sum_chart2:
+            print(
+                f"[ANALYTIK] Konsistensi Chart1 vs Chart2 menyimpang "
+                f"pada {d}: chart1={total_views_series[i]} "
+                f"sum_chart2={sum_chart2} -> dikoreksi"
+            )
+            total_views_series[i] = sum_chart2
+
+    return {
+        "dates": [d.strftime("%Y-%m-%d") for d in dates],
+        "total_views": total_views_series,
+        "creators": creators_series,
+    }
