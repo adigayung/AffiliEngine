@@ -189,11 +189,194 @@
 
             </div>
 
+
+            <!-- SHOPEE AFFILIATE PRODUCTS -->
+            <div class="card mt-3">
+
+                <div class="card-header d-flex align-items-center justify-content-between">
+
+                    <div>
+                        <i class="ti ti-shopping-cart me-2"></i>
+                        Shopee Affiliate Products
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        onclick="openShopeeAddModal()">
+                        <i class="ti ti-plus me-1"></i>
+                        Add Shopee Product
+                    </button>
+
+                </div>
+
+                <div class="card-body">
+
+                    {% if shopee_products %}
+
+                        {% for sp in shopee_products %}
+
+                            <div class="border rounded p-3 mb-3">
+
+                                <div class="d-flex align-items-start justify-content-between gap-2">
+
+                                    <div class="flex-fill">
+
+                                        <div class="fw-bold">
+                                            {{ sp.title or "Shopee Product" }}
+                                        </div>
+
+                                        {% if sp.shop_id %}
+
+                                            <div class="text-secondary small">
+                                                Shop ID : {{ sp.shop_id }}
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="removeShopeeProduct('{{ sp.product_id }}')">
+                                        <i class="ti ti-trash me-1"></i>
+                                        Remove
+                                    </button>
+
+                                </div>
+
+                                <div class="row g-2 mt-1 small">
+
+                                    {% if sp.price %}
+
+                                        <div class="col-auto">
+                                            <span class="text-secondary">Harga :</span>
+                                            <strong>Rp {{ "{:,}".format(sp.price) }}</strong>
+                                        </div>
+
+                                    {% endif %}
+
+                                    {% if sp.rating %}
+
+                                        <div class="col-auto">
+                                            <span class="text-secondary">Rating :</span>
+                                            <strong>{{ sp.rating }}</strong>
+                                        </div>
+
+                                    {% endif %}
+
+                                    {% if sp.sold_count %}
+
+                                        <div class="col-auto">
+                                            <span class="text-secondary">Terjual :</span>
+                                            <strong>{{ "{:,}".format(sp.sold_count) }}</strong>
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                                <div class="mt-2">
+
+                                    <div class="small text-secondary">Affiliate Link</div>
+
+                                    <a
+                                        href="{{ sp.url_link }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="text-break">
+                                        {{ sp.url_link }}
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <div class="empty py-4">
+
+                            <div class="empty-icon mb-2">
+                                <i class="ti ti-shopping-cart" style="font-size:2rem;opacity:0.5;"></i>
+                            </div>
+
+                            <p class="empty-title text-muted">
+                                Belum ada Shopee affiliate product.
+                            </p>
+
+                            <div class="empty-action">
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    onclick="openShopeeAddModal()">
+                                    <i class="ti ti-plus me-1"></i>
+                                    Add Shopee Product
+                                </button>
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
         </div>
 
     </div>
 
 </div>
+</div>
+
+<!-- Modal Add Shopee Product -->
+<div class="modal modal-blur fade" id="modalAddShopeeProduct" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add Shopee Affiliate Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <label class="form-label">Shopee Affiliate URL</label>
+
+                <input
+                    type="text"
+                    class="form-control"
+                    id="shopeeAffiliateUrl"
+                    placeholder="https://s.shopee.co.id/..."
+                    autocomplete="off">
+
+                <div class="invalid-feedback" id="shopeeUrlError"></div>
+
+                <div class="form-hint">
+                    Only links in the format https://s.shopee.co.id/&lt;code&gt; are accepted.
+                </div>
+
+                <div class="alert alert-danger d-none mt-2 mb-0" id="shopeeAddError" role="alert"></div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <button type="button" class="btn btn-primary" id="btnAddShopeeProduct">
+                    Add Product
+                </button>
+
+            </div>
+
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -210,6 +393,110 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof initProductRadar === 'function') {
         initProductRadar(productData);
     }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ============================================================
+    // SHOPEE AFFILIATE PRODUCT
+    // ============================================================
+    const shopeeAddModalEl = document.getElementById('modalAddShopeeProduct');
+    if (!shopeeAddModalEl) return;
+
+    const shopeeAddModal = new bootstrap.Modal(shopeeAddModalEl);
+    const shopeeUrlInput = document.getElementById('shopeeAffiliateUrl');
+    const shopeeUrlError = document.getElementById('shopeeUrlError');
+    const shopeeAddError = document.getElementById('shopeeAddError');
+    const shopeeAddBtn = document.getElementById('btnAddShopeeProduct');
+
+    const shopeeAddUrl = '{{ url_for("product.shopee_add", product_id=product.tiktok_id_product) }}';
+    const shopeeRemoveUrl = '{{ url_for("product.shopee_remove", product_id=product.tiktok_id_product, shopee_product_id="__SHOPEE_PRODUCT_ID__") }}';
+
+    window.openShopeeAddModal = function() {
+        shopeeUrlInput.value = '';
+        shopeeUrlInput.classList.remove('is-invalid');
+        shopeeUrlError.textContent = '';
+        shopeeAddError.classList.add('d-none');
+        shopeeAddError.textContent = '';
+        shopeeAddBtn.disabled = false;
+        shopeeAddBtn.textContent = 'Add Product';
+        shopeeAddModal.show();
+    };
+
+    async function submitAddShopeeProduct() {
+        const url = shopeeUrlInput.value.trim();
+
+        if (!url) {
+            shopeeUrlInput.classList.add('is-invalid');
+            shopeeUrlError.textContent = 'Please enter a Shopee affiliate URL.';
+            return;
+        }
+
+        shopeeUrlInput.classList.remove('is-invalid');
+        shopeeUrlError.textContent = '';
+        shopeeAddError.classList.add('d-none');
+        shopeeAddError.textContent = '';
+
+        shopeeAddBtn.disabled = true;
+        shopeeAddBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+        const formData = new FormData();
+        formData.append('affiliate_url', url);
+
+        try {
+            const response = await fetch(shopeeAddUrl, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                location.reload();
+                return;
+            }
+
+            shopeeAddError.textContent = result.message;
+            shopeeAddError.classList.remove('d-none');
+
+        } catch (err) {
+            shopeeAddError.textContent = 'Unable to retrieve Shopee product information. Please try again.';
+            shopeeAddError.classList.remove('d-none');
+        }
+
+        shopeeAddBtn.disabled = false;
+        shopeeAddBtn.textContent = 'Add Product';
+    }
+
+    document.getElementById('btnAddShopeeProduct')
+        .addEventListener('click', submitAddShopeeProduct);
+
+    shopeeUrlInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            submitAddShopeeProduct();
+        }
+    });
+
+    window.removeShopeeProduct = async function(shopeeProductId) {
+        if (!window.confirm('Remove this Shopee affiliate product from this TikTok product?')) {
+            return;
+        }
+        try {
+            const response = await fetch(
+                shopeeRemoveUrl.replace('__SHOPEE_PRODUCT_ID__', encodeURIComponent(shopeeProductId)),
+                { method: 'POST' }
+            );
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                window.alert(result.message);
+            }
+        } catch (err) {
+            window.alert('Unable to remove Shopee product.');
+        }
+    };
 });
 </script>
 {% endif %}

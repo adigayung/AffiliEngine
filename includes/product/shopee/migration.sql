@@ -1,0 +1,43 @@
+-- ============================================================
+-- MIGRATION: Fix Illegal mix of collations pada Shopee Affiliate
+-- Tanggal: (sesuai tanggal eksekusi)
+-- ============================================================
+-- Masalah:
+--   Error 1267 "Illegal mix of collations" saat JOIN:
+--     tiktok_shopee_products.shopee_product_id = shopee_products.product_id
+--
+--   Database existing menggunakan utf8mb4_general_ci
+--   (lihat tiktok_products.tiktok_id_product),
+--   sedangkan shopee_products.product_id menggunakan
+--   utf8mb4_unicode_ci (tabel shopee_products dibuat dengan
+--   COLLATE=utf8mb4_unicode_ci).
+--
+-- Solusi:
+--   Samakan collation kolom RELASI Shopee dengan database existing
+--   (utf8mb4_general_ci). TIDAK mengubah tiktok_products (tabel
+--   existing yang dipakai banyak modul).
+--
+-- Kolom lain di shopee_products (shop, title, description, shop_id,
+-- url_link, status) TIDAK diubah karena tidak ikut dalam
+-- JOIN/comparison yang menyebabkan error.
+--
+-- Setelah migrasi, kedua sisi JOIN konsisten utf8mb4_general_ci:
+--   tiktok_shopee_products.shopee_product_id = shopee_products.product_id
+-- ============================================================
+
+ALTER TABLE shopee_products
+    MODIFY product_id VARCHAR(100) NOT NULL COLLATE utf8mb4_general_ci;
+
+-- ============================================================
+-- VERIFIKASI (jalankan di MySQL):
+--   1) SHOW CREATE TABLE shopee_products;
+--      -> product_id varchar(100) ... COLLATE utf8mb4_general_ci
+--
+--   2) Query JOIN yang dipakai get_shopee_products_for_tiktok():
+--      SELECT sp.*
+--      FROM shopee_products sp
+--      INNER JOIN tiktok_shopee_products tsp
+--          ON tsp.shopee_product_id = sp.product_id
+--      WHERE tsp.tiktok_product_id = '<tiktok_id_product>';
+--      -> Tidak ada Error 1267
+-- ============================================================
