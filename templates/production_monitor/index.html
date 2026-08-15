@@ -593,10 +593,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
+                                        tooltip: {
                         callbacks: {
                             title: function(items) {
-                                return chartData.dates[items[0].dataIndex];
+                                var raw = chartData.dates[items[0].dataIndex];
+                                var p = raw.split('-');
+                                var dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                                var dayIdx = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10)).getDay();
+                                return dayNames[dayIdx] + ' ' + raw;
                             },
                             label: function(context) {
                                 return 'Total Views: ' + context.parsed.y.toLocaleString();
