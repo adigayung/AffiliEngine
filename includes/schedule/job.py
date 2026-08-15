@@ -15,7 +15,8 @@ class UploadJob:
         video_filename,
         caption,
         llm_provider,
-        llm_model
+        llm_model,
+        shopee_affiliate_link=None
     ):
 
         self.job_id = job_id
@@ -36,7 +37,14 @@ class UploadJob:
 
         self.llm_model = llm_model
 
+        # Additive: Shopee Affiliate (None jika produk tidak punya mapping)
+        self.shopee_affiliate_link = shopee_affiliate_link
+
     def to_json(self):
+
+        schedule_datetime_str = self.schedule_datetime.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
         return {
 
@@ -58,17 +66,33 @@ class UploadJob:
 
                 "title": self.product["title"],
 
-                "url": self.product["product_link"]
+                "url": self.product["product_link"],
+
+                # Additive: Shopee Affiliate link (None jika tidak ada mapping)
+                "shopee_affiliate_link": self.shopee_affiliate_link
 
             },
 
             "schedule": {
 
-                "datetime": self.schedule_datetime.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
+                "datetime": schedule_datetime_str,
 
                 "status": "pending"
+
+            },
+
+            # Additive: Facebook mengikuti jadwal TikTok 100% sama.
+            # status = "pending" jika ada mapping Shopee,
+            #          "not_available" jika tidak ada mapping Shopee.
+            "facebook_schedule": {
+
+                "datetime": schedule_datetime_str,
+
+                "status": (
+                    "pending"
+                    if self.shopee_affiliate_link
+                    else "not_available"
+                )
 
             },
 

@@ -13,7 +13,8 @@ from includes.mysql import (
     get_creator,
     get_product_basic,
     save_upload_job,
-    save_schedule_batch
+    save_schedule_batch,
+    get_shopee_affiliate_link
 )
 
 from includes.config_loader import (
@@ -292,6 +293,11 @@ class UploadScheduler:
 
     ):
 
+        # Additive: lookup Shopee Affiliate (None jika tidak ada mapping)
+        shopee_affiliate_link = get_shopee_affiliate_link(
+            product["tiktok_id_product"]
+        )
+
         job = UploadJob(
 
             job_id=job_id,
@@ -310,7 +316,9 @@ class UploadScheduler:
 
             llm_provider="openrouter.ai",
 
-            llm_model=self.openrouter_config["models"]["tiktok_caption"]
+            llm_model=self.openrouter_config["models"]["tiktok_caption"],
+
+            shopee_affiliate_link=shopee_affiliate_link
 
         )
 

@@ -474,6 +474,47 @@ def get_product_basic(product_id: int):
 
 
 # =========================
+# SHOPEE AFFILIATE (schedule.json additive)
+# =========================
+
+def get_shopee_affiliate_link(tiktok_product_id):
+    """
+    Ambil SATU url_link Shopee affiliate untuk tiktok_product_id.
+
+    Relasi database yang digunakan (sesuai skema existing):
+        tiktok_shopee_products.tiktok_product_id  (berisi tiktok_id_product)
+            -> tiktok_shopee_products.shopee_product_id
+            -> shopee_products.product_id
+            -> shopee_products.url_link
+
+    Karena satu tiktok_product_id dapat memiliki BANYAK mapping
+    (one-to-many), cukup pilih satu mapping secara RANDOM.
+
+    Returns:
+        str: shopee_products.url_link, atau None jika tidak ada mapping.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT sp.url_link
+                FROM tiktok_shopee_products tsp
+                INNER JOIN shopee_products sp
+                    ON tsp.shopee_product_id = sp.product_id
+                WHERE tsp.tiktok_product_id = %s
+                ORDER BY RAND()
+                LIMIT 1
+                """,
+                (tiktok_product_id,)
+            )
+            row = cursor.fetchone()
+            return row["url_link"] if row else None
+    finally:
+        conn.close()
+
+
+# =========================
 # GET ALL PRODUCTS
 # =========================
 def get_all_products():
