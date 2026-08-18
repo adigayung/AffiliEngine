@@ -18,6 +18,17 @@ video_pipeline_bp = Blueprint(
 # In-memory state for the pipeline runner
 # ================================================================
 
+def _to_bool(value, default: bool) -> bool:
+    """Convert a form value to bool.
+
+    HTML checkbox: "1"/"on"/"true"/"yes" -> True, lainnya -> False.
+    Jika value None (field tidak dikirim), gunakan default.
+    """
+    if value is None:
+        return default
+    return str(value).strip().lower() in ("1", "true", "on", "yes")
+
+
 class PipelineRunner:
     """Manages the state of a video pipeline execution."""
 
@@ -68,24 +79,33 @@ class PipelineRunner:
         if len(self.logs) > 500:
             self.logs = self.logs[-500:]
 
-    def _run_pipeline(self, root_path: str):
+    def _run_pipeline(self, root_path: str, preserve_audio: bool, add_music: bool):
         """Run the pipeline in a background thread."""
         try:
-            result = create_video(root_path, log_callback=self.add_log)
+            result = create_video(
+                root_path,
+                log_callback=self.add_log,
+                preserve_audio=preserve_audio,
+                add_music=add_music,
+            )
             self.add_log(f"Pipeline selesai: {result['succeeded']} OK, {result['failed']} FAIL")
         except Exception as e:
             self.add_log(f"[ERROR] Pipeline crash: {e}")
         finally:
             self.running = False
 
-    def start(self, root_path: str) -> bool:
+    def start(self, root_path: str, preserve_audio: bool = False, add_music: bool = True) -> bool:
         """Start the pipeline in a background thread."""
         if self.running:
             return False
 
         self.logs.clear()
         self.running = True
-        self.thread = threading.Thread(target=self._run_pipeline, args=(root_path,), daemon=True)
+        self.thread = threading.Thread(
+            target=self._run_pipeline,
+            args=(root_path, preserve_audio, add_music),
+            daemon=True,
+        )
         self.thread.start()
         return True
 
@@ -116,6 +136,10 @@ def start():
     """Start the video pipeline."""
     root_path = request.form.get("root_path", "").strip()
 
+    # Opsi audio/music (default: preserve_audio=false, add_music=true)
+    preserve_audio = _to_bool(request.form.get("preserve_audio"), default=False)
+    add_music = _to_bool(request.form.get("add_music"), default=True)
+
     if not root_path:
         return jsonify({"success": False, "message": "Root path tidak boleh kosong."}), 400
 
@@ -123,7 +147,11 @@ def start():
     if not os.path.isdir(root_path):
         return jsonify({"success": False, "message": "Path tidak ditemukan atau bukan folder."}), 400
 
-    ok = pipeline_runner.start(root_path)
+    ok = pipeline_runner.start(
+        root_path,
+        preserve_audio=preserve_audio,
+        add_music=add_music,
+    )
 
     if not ok:
         return jsonify({"success": False, "message": "Pipeline sedang berjalan."}), 409

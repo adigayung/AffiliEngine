@@ -275,6 +275,68 @@
 
                     </div>
 
+                    <div class="mb-3">
+
+                        <label class="form-check form-switch">
+
+                            <input
+
+                                id="preserveAudio"
+
+                                class="form-check-input"
+
+                                type="checkbox"
+
+                                autocomplete="off">
+
+                            <span class="form-check-label">
+
+                                Pertahankan Audio
+
+                            </span>
+
+                        </label>
+
+                        <div class="form-hint">
+
+                            Jika dicentang, audio asli video (a.mp4 / b.mp4) dipertahankan.
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-check form-switch">
+
+                            <input
+
+                                id="addMusic"
+
+                                class="form-check-input"
+
+                                type="checkbox"
+
+                                checked
+
+                                autocomplete="off">
+
+                            <span class="form-check-label">
+
+                                Tambahkan Music
+
+                            </span>
+
+                        </label>
+
+                        <div class="form-hint">
+
+                            Jika dicentang, music dari sound.json ditambahkan.
+
+                        </div>
+
+                    </div>
+
                     <div class="mt-4">
 
                         <button
@@ -363,6 +425,8 @@
 <script>
 
 const rootPath = document.getElementById("rootPath");
+const preserveAudio = document.getElementById("preserveAudio");
+const addMusic = document.getElementById("addMusic");
 const btnCreate = document.getElementById("btnCreate");
 
 let isRunning = false;
@@ -393,6 +457,10 @@ function setButtonState(running) {
 
         rootPath.disabled = true;
 
+        preserveAudio.disabled = true;
+
+        addMusic.disabled = true;
+
     }
 
     else {
@@ -409,6 +477,10 @@ function setButtonState(running) {
         `;
 
         rootPath.disabled = false;
+
+        preserveAudio.disabled = false;
+
+        addMusic.disabled = false;
 
     }
 
@@ -453,6 +525,10 @@ btnCreate.addEventListener("click", async function () {
     const form = new FormData();
 
     form.append("root_path", path);
+
+    form.append("preserve_audio", preserveAudio.checked ? "1" : "0");
+
+    form.append("add_music", addMusic.checked ? "1" : "0");
 
     try {
 

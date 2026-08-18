@@ -28,17 +28,23 @@ from includes.video_pipeline.upscale_video import upscale_video
 # Scanning
 # ================================================================
 
-def _scan_folders(root_path: str) -> list[dict]:
+def _scan_folders(root_path: str, add_music: bool = True) -> list[dict]:
     """Scan root folder recursively for valid video folders.
 
     A valid folder must contain:
       - aseets/a.mp4
-      - aseets/sound.json
+
+    Jika add_music=True, folder juga wajib memiliki aseets/sound.json.
+
+    Args:
+        root_path: Path folder root yang akan discan.
+        add_music: Jika True, sound.json wajib ada (music akan diproses).
+            Jika False, sound.json tidak diperlukan.
 
     Returns:
         List of dicts with keys:
           - video_path: str — full path to a.mp4
-          - sound_json_path: str — full path to sound.json
+          - sound_json_path: str — full path to sound.json ("" jika tidak ada)
           - asset_dir: str — directory containing a.mp4 & sound.json
           - job_dir: str — parent directory of asset_dir (folder jadwal)
     """
@@ -52,17 +58,23 @@ def _scan_folders(root_path: str) -> list[dict]:
         sound_json = asset_dir / "sound.json"
 
         print(f"  Found video: {video_file.resolve()}")
-        print(f"  Looking for sound: {sound_json.resolve()}")
 
-        if not sound_json.exists():
-            print(f"  [FAIL] sound.json tidak ditemukan, skip")
-            continue
+        if add_music:
+            print(f"  Looking for sound: {sound_json.resolve()}")
 
-        print(f"  [OK] sound.json ditemukan")
+            if not sound_json.exists():
+                print(f"  [FAIL] sound.json tidak ditemukan, skip")
+                continue
+
+            print(f"  [OK] sound.json ditemukan")
+            sound_json_path = str(sound_json.resolve())
+        else:
+            print(f"  [SKIP] sound.json tidak diperlukan (add_music=false)")
+            sound_json_path = ""
 
         results.append({
             "video_path": str(video_file.resolve()),
-            "sound_json_path": str(sound_json.resolve()),
+            "sound_json_path": sound_json_path,
             "asset_dir": str(asset_dir.resolve()),
             "job_dir": str(asset_dir.parent.resolve()),
         })
@@ -189,6 +201,8 @@ def _process_single_folder(
     folder_info: dict,
     music_index: int,
     log_callback: Optional[Callable] = None,
+    preserve_audio: bool = False,
+    add_music: bool = True,
 ) -> bool:
     """Process a single folder through the video pipeline.
 
@@ -196,6 +210,8 @@ def _process_single_folder(
         folder_info: Dict with video_path, sound_json_path, asset_dir, job_dir.
         music_index: Round-robin index for music selection.
         log_callback: Optional function to call for realtime log messages.
+        preserve_audio: Jika True, audio asli video dipertahankan.
+        add_music: Jika True, music dari sound.json ditambahkan.
 
     Returns:
         True if successful, False if any step failed.
@@ -230,25 +246,30 @@ def _process_single_folder(
     final_output_path = job_dir / output_filename
     _log(f"  Output: {final_output_path.resolve()}")
 
-    # --- Load sound.json ---
-    sound_data = _load_sound_json(sound_json_path)
-    if not sound_data:
-        _log("  [SKIP] Gagal membaca sound.json")
-        return False
+    # --- Load sound.json & pilih music (hanya jika add_music=True) ---
+    music_file = None
+    if add_music:
+        sound_data = _load_sound_json(sound_json_path)
+        if not sound_data:
+            _log("  [SKIP] Gagal membaca sound.json")
+            return False
 
-    music_list = sound_data.get("music_list", [])
-    music_file = _get_music_for_index(music_list, music_index)
-    if not music_file:
-        _log("  [SKIP] music_list kosong")
-        return False
+        music_list = sound_data.get("music_list", [])
+        music_file = _get_music_for_index(music_list, music_index)
+        if not music_file:
+            _log("  [SKIP] music_list kosong")
+            return False
 
-    music_name = Path(music_file).name
+        music_name = Path(music_file).name
+        _log(f"  Music: {music_name}")
+    else:
+        _log("  Music: skip (add_music=false)")
+
     _log(f"  Video: a.mp4")
-    _log(f"  Music: {music_name}")
 
     # -- Step 1: Decode/Reverse --
     _log("  Decode/Reverse...")
-    decode_output = decode_single_video(video_path)
+    decode_output = decode_single_video(video_path, preserve_audio=preserve_audio)
     if not decode_output:
         _log("  [FAIL] Decode gagal")
         return False
@@ -264,22 +285,34 @@ def _process_single_folder(
     # decode_output (output.mp4) adalah hasil decode, ini temp
     temp_files.append(str(decode_path.resolve()))
 
-    # -- Step 2: Add Sound --
-    _log("  Add Sound...")
-    sound_output = add_sound(str(decode_path), music_file)
-    if not sound_output:
-        _log("  [FAIL] Add Sound gagal")
-        return False
-    _log("  [OK]")
+    # -- Step 2: Add Sound (hanya jika add_music=True) --
+    if add_music:
+        _log("  Add Sound...")
+        sound_output = add_sound(
+            str(decode_path),
+            music_file,
+            preserve_audio=preserve_audio,
+        )
+        if not sound_output:
+            _log("  [FAIL] Add Sound gagal")
+            return False
+        _log("  [OK]")
 
-    sound_path = Path(sound_output)
-    # sound_output adalah temp
-    temp_files.append(str(sound_path.resolve()))
+        sound_path = Path(sound_output)
+        # sound_output adalah temp
+        temp_files.append(str(sound_path.resolve()))
+        # Input untuk step selanjutnya
+        current_input = sound_path
+    else:
+        _log("  Add Sound: skip (add_music=false)")
+        # Gunakan hasil decode langsung
+        # (audio asli jika preserve_audio=true, tanpa audio jika false)
+        current_input = decode_path
 
     # -- Step 3: Zoom 105% (menghilangkan watermark di pinggir) --
     _log("  Zoom 105%...")
     try:
-        zoom_output = zoom_video(str(sound_path), scale=1.05)
+        zoom_output = zoom_video(str(current_input), scale=1.05)
     except Exception as e:
         _log(f"  [FAIL] Zoom gagal: {e}")
         return False
@@ -325,7 +358,12 @@ def _process_single_folder(
 # Public API
 # ================================================================
 
-def create_video(root_path: str, log_callback: Optional[Callable] = None) -> dict:
+def create_video(
+    root_path: str,
+    log_callback: Optional[Callable] = None,
+    preserve_audio: bool = False,
+    add_music: bool = True,
+) -> dict:
     """Main entry point: process all videos in a root folder.
 
     Scans recursively for valid folders, runs the full pipeline on each,
@@ -334,6 +372,8 @@ def create_video(root_path: str, log_callback: Optional[Callable] = None) -> dic
     Args:
         root_path: Absolute path to the root folder containing video projects.
         log_callback: Optional callable(text: str) for realtime log updates.
+        preserve_audio: Jika True, audio asli video dipertahankan (default False).
+        add_music: Jika True, music dari sound.json ditambahkan (default True).
 
     Returns:
         Dict with:
@@ -351,9 +391,11 @@ def create_video(root_path: str, log_callback: Optional[Callable] = None) -> dic
     _log("Video Pipeline Started")
     _log("=" * 50)
     _log(f"Root: {root_path}")
+    _log(f"Preserve Audio: {preserve_audio}")
+    _log(f"Add Music: {add_music}")
 
     # Scan
-    folders = _scan_folders(str(root_path))
+    folders = _scan_folders(str(root_path), add_music=add_music)
 
     if not folders:
         _log("Tidak ada folder valid ditemukan.")
@@ -374,7 +416,13 @@ def create_video(root_path: str, log_callback: Optional[Callable] = None) -> dic
     for idx, folder_info in enumerate(folders):
         _log("-" * 50)
         try:
-            ok = _process_single_folder(folder_info, idx, log_callback)
+            ok = _process_single_folder(
+                folder_info,
+                idx,
+                log_callback,
+                preserve_audio=preserve_audio,
+                add_music=add_music,
+            )
         except Exception as e:
             _log(f"  [ERROR] Unexpected error: {e}")
             ok = False

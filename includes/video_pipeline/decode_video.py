@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 import subprocess
 import shutil
+import json
 import cv2
 
 
@@ -52,6 +53,64 @@ def is_resolution_below(video_path: str, width: int = MIN_WIDTH, height: int = M
     print(f"  Resolusi: {w}x{h}")
 
     return w < width or h < height
+
+
+def _has_audio_stream(file_path: Path) -> bool:
+    """Cek apakah file media memiliki stream audio.
+
+    Args:
+        file_path: Path ke file media.
+
+    Returns:
+        True jika ada stream audio, False jika tidak atau gagal baca.
+    """
+    cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_streams",
+        str(file_path),
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            return False
+        data = json.loads(result.stdout)
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "audio":
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def _get_duration_seconds(file_path: Path) -> Optional[float]:
+    """Ambil durasi file media dalam detik menggunakan ffprobe.
+
+    Args:
+        file_path: Path ke file media.
+
+    Returns:
+        Durasi dalam detik, atau None jika gagal.
+    """
+    cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        str(file_path),
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        duration = data.get("format", {}).get("duration")
+        if duration is None:
+            return None
+        return float(duration)
+    except Exception:
+        return None
 
 
 def _ffmpeg(cmd: list, description: str, timeout: int = 600) -> bool:
@@ -209,12 +268,16 @@ def _scale_105(input_path: Path) -> bool:
     return False
 
 
-def _reverse_video(input_path: Path, output_path: Path) -> bool:
+def _reverse_video(input_path: Path, output_path: Path, preserve_audio: bool = False) -> bool:
     """Langkah: Reverse video menggunakan ffmpeg.
+
+    Hanya stream video yang di-reverse. Jika preserve_audio=True, audio asli
+    disalin apa adanya (arah normal, TIDAK ikut di-reverse).
 
     Args:
         input_path: Path file video input.
         output_path: Path file video output.
+        preserve_audio: Jika True, audio asli dipertahankan dalam arah normal.
 
     Returns:
         True jika berhasil, False jika gagal.
@@ -226,15 +289,80 @@ def _reverse_video(input_path: Path, output_path: Path) -> bool:
         "-preset", "slow",
         "-crf", "18",
         "-pix_fmt", "yuv420p",
-        "-an",
-        "-y",
-        str(output_path),
     ]
+
+    if preserve_audio:
+        # Audio asli tetap dalam arah normal (tidak di-reverse).
+        # Jika input tidak punya audio, opsi ini tidak berpengaruh.
+        cmd += ["-c:a", "copy"]
+    else:
+        cmd += ["-an"]
+
+    cmd += ["-y", str(output_path)]
 
     return _ffmpeg(cmd, f"Reverse {input_path.name} -> {output_path.name}")
 
 
-def _merge_dip_to_black(video_a: Path, video_b: Path, output_path: Path) -> bool:
+def _build_audio_concat_args(
+    video_a: Path,
+    video_b: Path,
+    preserve_audio: bool,
+    duration_a: float,
+    duration_b: Optional[float] = None,
+) -> tuple[str, list]:
+    """Bangun argumen filter + map untuk mempertahankan audio saat concat 2 video.
+
+    Audio SELALU dalam arah normal (tidak pernah di-reverse), hanya stream
+    video yang boleh di-reverse oleh proses lain.
+
+    Args:
+        video_a: Path video pertama.
+        video_b: Path video kedua.
+        preserve_audio: Jika False, tidak ada audio yang dipertahankan.
+        duration_a: Durasi video pertama (detik).
+        duration_b: Durasi video kedua (detik), opsional.
+
+    Returns:
+        Tuple (filter_suffix, extra_args):
+          - filter_suffix: string filter tambahan ("" jika tidak ada).
+          - extra_args: list argumen ffmpeg tambahan (map & encoder audio).
+    """
+    filter_suffix = ""
+    extra_args: list = []
+
+    if not preserve_audio:
+        return filter_suffix, extra_args
+
+    has_audio_a = _has_audio_stream(video_a)
+    has_audio_b = _has_audio_stream(video_b)
+
+    if has_audio_a and has_audio_b:
+        if duration_b is None or duration_b <= 0:
+            duration_b = 0.0
+        # Concat audio kedua input dalam arah normal.
+        # atrim membatasi agar audio tidak melebihi durasi masing-masing video.
+        filter_suffix = (
+            f";[0:a]atrim=0:{duration_a},asetpts=PTS-STARTPTS[a0];"
+            f"[1:a]atrim=0:{duration_b},asetpts=PTS-STARTPTS[a1];"
+            f"[a0][a1]concat=n=2:v=0:a=1[aout]"
+        )
+        extra_args = ["-map", "[aout]", "-c:a", "aac"]
+    elif has_audio_a:
+        # Hanya video pertama yang punya audio — gunakan apa adanya.
+        extra_args = ["-map", "0:a", "-c:a", "aac"]
+    elif has_audio_b:
+        # Hanya video kedua yang punya audio — gunakan apa adanya.
+        extra_args = ["-map", "1:a", "-c:a", "aac"]
+
+    return filter_suffix, extra_args
+
+
+def _merge_dip_to_black(
+    video_a: Path,
+    video_b: Path,
+    output_path: Path,
+    preserve_audio: bool = False,
+) -> bool:
     """Gabung dua video dengan transisi Dip To Black.
 
     Dip To Black = crossfade dengan black color (fade out lalu fade in).
@@ -243,12 +371,12 @@ def _merge_dip_to_black(video_a: Path, video_b: Path, output_path: Path) -> bool
         video_a: Path video pertama (a.mp4).
         video_b: Path video kedua.
         output_path: Path output (output.mp4).
+        preserve_audio: Jika True, audio asli kedua input dipertahankan
+            (dalam arah normal, tidak di-reverse).
 
     Returns:
         True jika berhasil, False jika gagal.
     """
-    import json
-
     # Probe durasi video_a
     probe_cmd = [
         "ffprobe",
@@ -261,28 +389,44 @@ def _merge_dip_to_black(video_a: Path, video_b: Path, output_path: Path) -> bool
         probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
         if probe_result.returncode != 0:
             print("  Probe gagal, fallback ke hard cut")
-            return _concat_fallback(video_a, video_b, output_path)
+            return _concat_fallback(video_a, video_b, output_path, preserve_audio=preserve_audio)
         probe_data = json.loads(probe_result.stdout)
         duration_a = float(probe_data.get("format", {}).get("duration", 0))
     except Exception as e:
         print(f"  Probe error: {e}, fallback ke hard cut")
-        return _concat_fallback(video_a, video_b, output_path)
+        return _concat_fallback(video_a, video_b, output_path, preserve_audio=preserve_audio)
 
     if duration_a <= 0:
         print("  Durasi video_a tidak valid, fallback ke hard cut")
-        return _concat_fallback(video_a, video_b, output_path)
+        return _concat_fallback(video_a, video_b, output_path, preserve_audio=preserve_audio)
 
     dip = DIP_DURATION
     start_fade_out = max(0, duration_a - dip)
 
+    # Filter video (selalu diproses seperti existing)
+    vf = (
+        f"[0:v]fade=t=out:st={start_fade_out}:d={dip}:color=black[f0];"
+        f"[1:v]fade=t=in:st=0:d={dip}:color=black[f1];"
+        f"[f0][f1]concat=n=2:v=1:a=0[vout]"
+    )
+
+    # Audio tambahan hanya jika preserve_audio=True
+    duration_b = None
+    if preserve_audio:
+        duration_b = _get_duration_seconds(video_b)
+    audio_suffix, audio_args = _build_audio_concat_args(
+        video_a, video_b, preserve_audio, duration_a, duration_b
+    )
+    filter_complex = vf + audio_suffix
+
     cmd = [
         "-i", str(video_a),
         "-i", str(video_b),
-        "-filter_complex",
-        f"[0:v]fade=t=out:st={start_fade_out}:d={dip}:color=black[f0];"
-        f"[1:v]fade=t=in:st=0:d={dip}:color=black[f1];"
-        f"[f0][f1]concat=n=2:v=1:a=0[out]",
-        "-map", "[out]",
+        "-filter_complex", filter_complex,
+        "-map", "[vout]",
+    ]
+    cmd += audio_args
+    cmd += [
         "-c:v", "libx264",
         "-preset", "slow",
         "-crf", "18",
@@ -294,23 +438,43 @@ def _merge_dip_to_black(video_a: Path, video_b: Path, output_path: Path) -> bool
     return _ffmpeg(cmd, f"Merge with Dip To Black ({dip}s)")
 
 
-def _concat_fallback(video_a: Path, video_b: Path, output_path: Path) -> bool:
+def _concat_fallback(
+    video_a: Path,
+    video_b: Path,
+    output_path: Path,
+    preserve_audio: bool = False,
+) -> bool:
     """Fallback: concat dua video tanpa transisi (hard cut).
 
     Args:
         video_a: Path video pertama.
         video_b: Path video kedua.
         output_path: Path output.
+        preserve_audio: Jika True, audio asli kedua input dipertahankan
+            (dalam arah normal, tidak di-reverse).
 
     Returns:
         True jika berhasil, False jika gagal.
     """
+    duration_a = 0.0
+    duration_b = None
+    if preserve_audio:
+        duration_a = _get_duration_seconds(video_a) or 0.0
+        duration_b = _get_duration_seconds(video_b)
+
+    audio_suffix, audio_args = _build_audio_concat_args(
+        video_a, video_b, preserve_audio, duration_a, duration_b
+    )
+
     cmd = [
         "-i", str(video_a),
         "-i", str(video_b),
         "-filter_complex",
-        "[0:v][1:v]concat=n=2:v=1:a=0[out]",
-        "-map", "[out]",
+        "[0:v][1:v]concat=n=2:v=1:a=0[vout]" + audio_suffix,
+        "-map", "[vout]",
+    ]
+    cmd += audio_args
+    cmd += [
         "-c:v", "libx264",
         "-preset", "slow",
         "-crf", "18",
@@ -322,7 +486,7 @@ def _concat_fallback(video_a: Path, video_b: Path, output_path: Path) -> bool:
     return _ffmpeg(cmd, "Merge (hard cut fallback)")
 
 
-def decode_single_video(video_path: str) -> Optional[str]:
+def decode_single_video(video_path: str, preserve_audio: bool = False) -> Optional[str]:
     """Proses decode/reverse untuk SATU file video.
 
     Pipeline:
@@ -334,6 +498,8 @@ def decode_single_video(video_path: str) -> Optional[str]:
 
     Args:
         video_path: Path absolut ke file a.mp4.
+        preserve_audio: Jika True, audio asli video dipertahankan pada hasil
+            decode/merge. Audio TIDAK ikut di-reverse (arah normal).
 
     Returns:
         Path absolut ke output.mp4 jika berhasil, None jika gagal.
@@ -359,8 +525,9 @@ def decode_single_video(video_path: str) -> Optional[str]:
         second_video_path = b_path
     else:
         # Reverse a.mp4 -> a_2.mp4
+        # Jika preserve_audio=True, audio a_2.mp4 tetap arah normal (copy).
         a2_path = video_file.with_name("a_2.mp4")
-        if not _reverse_video(video_file, a2_path):
+        if not _reverse_video(video_file, a2_path, preserve_audio=preserve_audio):
             print(f"  [!] Gagal reverse, skip")
             if a2_path.exists():
                 try:
@@ -372,7 +539,9 @@ def decode_single_video(video_path: str) -> Optional[str]:
 
     # Step 2: Merge a.mp4 + DipToBlack(0.4s) + second_video -> output.mp4
     output_path = video_file.with_name("output.mp4")
-    if not _merge_dip_to_black(video_file, second_video_path, output_path):
+    if not _merge_dip_to_black(
+        video_file, second_video_path, output_path, preserve_audio=preserve_audio
+    ):
         print(f"  [!] Gagal merge, skip")
         return None
 
