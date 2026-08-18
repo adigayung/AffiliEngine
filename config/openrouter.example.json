@@ -1,0 +1,10 @@
+{
+    "base_url": "https://openrouter.ai/api/v1",
+    "api_key": "YOUR_OPENROUTER_API_KEY",
+    "models": {
+        "image_analysis": "google/gemma-3-27b-it",
+        "text_analysis": "tencent/hy3-preview",
+		"tiktok_caption": "google/gemma-3-27b-it",
+		"compare_products": "tencent/hy3-preview"
+    }
+}
