@@ -29,6 +29,7 @@ from routers.tiktok_uploader.index import tiktok_uploader_bp
 from routers.product.index import product_ID_bp
 from routers.creator.index import creator_bp
 from routers.upload_video.index import upload_video_bp
+from routers.facebook_uploader.index import facebook_uploader_bp
 from routers.production_monitor.index import production_monitor_bp
 from routers.video_pipeline.index import video_pipeline_bp
 from routers.creator.report import creator_report_bp
@@ -47,6 +48,7 @@ app.register_blueprint(tiktok_uploader_bp)
 app.register_blueprint(product_ID_bp)
 app.register_blueprint(creator_bp)
 app.register_blueprint(upload_video_bp)
+app.register_blueprint(facebook_uploader_bp)
 app.register_blueprint(production_monitor_bp)
 app.register_blueprint(video_pipeline_bp)
 app.register_blueprint(creator_report_bp)

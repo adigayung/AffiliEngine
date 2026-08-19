@@ -1,0 +1,771 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Facebook Uploader{% endblock %}
+
+{% block content %}
+
+<style>
+
+#logConsole{
+
+    height:420px;
+
+    overflow-y:auto;
+
+    background:#0d1117;
+
+    font-family:Consolas, "Courier New", monospace;
+
+    font-size:16px;
+
+    color:#f0f6fc;
+
+    border-radius:0 0 .5rem .5rem;
+
+}
+
+.log-header{
+
+    position:sticky;
+
+    top:0;
+
+    display:flex;
+
+    align-items:center;
+
+    padding:10px 14px;
+
+    background:#161b22;
+
+    border-bottom:1px solid #30363d;
+
+    font-weight:600;
+
+    color:#8b949e;
+
+    z-index:10;
+
+}
+
+.log-header .time{
+
+    width:90px;
+
+}
+
+.log-header .type{
+
+    width:100px;
+
+}
+
+.log-header .message{
+
+    flex:1;
+
+}
+
+</style>
+
+<div class="page-wrapper">
+
+    <!-- Page Header -->
+    <div class="page-header d-print-none">
+
+        <div class="container-xl">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <h2 class="page-title">
+
+                    <i class="ti ti-brand-facebook me-2"></i>
+
+                    Facebook Uploader
+
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Page Body -->
+    <div class="page-body">
+
+        <div class="container-xl">
+
+            <!-- Facebook Info Card -->
+            <div class="card mb-4">
+
+                <div class="card-body">
+
+                    <div class="d-flex align-items-start gap-3">
+
+                        <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded"
+                             style="width:52px;height:52px;background:#1877f2;">
+
+                            <i class="ti ti-brand-facebook fs-2 text-white"></i>
+
+                        </div>
+
+                        <div class="flex-fill min-w-0">
+
+                            <h3 class="mb-1 fw-bold">Facebook Uploader</h3>
+
+                            <p class="text-secondary small mb-2">
+
+                                Upload dan jadwalkan video ke Facebook menggunakan project yang sama
+
+                                dengan TikTok Affiliate Engine. Data project diambil dari
+
+                                <code>upload_schedule.json</code> dan setiap project divalidasi
+
+                                berdasarkan <code>schedule.json</code> masing-masing.
+
+                            </p>
+
+                            <div class="small">
+
+                                <span class="me-3">
+
+                                    <i class="ti ti-check text-success me-1"></i>Shopee Affiliate Link
+
+                                </span>
+
+                                <span class="me-3">
+
+                                    <i class="ti ti-check text-success me-1"></i>Facebook Schedule
+
+                                </span>
+
+                                <span>
+
+                                    <i class="ti ti-check text-success me-1"></i>Video &lt; 1 MB otomatis dilewati
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Upload Configuration -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h3 class="card-title">
+
+                        Upload Configuration
+
+                    </h3>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+
+                            Workflow JSON
+
+                        </label>
+
+                        <input
+
+                            id="jsonFile"
+
+                            type="file"
+
+                            class="form-control"
+
+                            accept=".json">
+
+                        <div class="form-hint">
+
+                            Upload file <code>upload_schedule.json</code> yang sama dengan TikTok Uploader.
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+
+                            <label class="form-label mb-0">
+
+                                Video Path List
+
+                            </label>
+
+                        </div>
+
+                        <textarea
+
+                            id="pathList"
+
+                            class="form-control"
+
+                            rows="10"
+
+                            placeholder="Hanya project VALID yang dimasukkan ke sini..."></textarea>
+
+                    </div>
+
+                    <div class="mt-4">
+
+                        <button
+
+                            id="btnRunner"
+
+                            class="btn btn-success"
+
+                            disabled>
+
+                            <i class="ti ti-player-play-filled me-1"></i>
+
+                            START
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Validation Summary -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h3 class="card-title">
+
+                        <i class="ti ti-chart-bar me-2"></i>
+
+                        Validasi Project
+
+                    </h3>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="row g-3 text-center">
+
+                        <div class="col-6 col-md-3">
+
+                            <div class="fs-2 fw-bold" id="sumTotal">0</div>
+
+                            <div class="text-secondary small">Total Project</div>
+
+                        </div>
+
+                        <div class="col-6 col-md-3">
+
+                            <div class="fs-2 fw-bold text-success" id="sumValid">0</div>
+
+                            <div class="text-secondary small">Siap di-upload</div>
+
+                        </div>
+
+                        <div class="col-6 col-md-3">
+
+                            <div class="fs-2 fw-bold text-danger" id="sumInvalid">0</div>
+
+                            <div class="text-secondary small">Invalid / skipped</div>
+
+                        </div>
+
+                        <div class="col-6 col-md-3">
+
+                            <div class="fs-2 fw-bold" id="sumCompleted" style="color:#9775fa;">0</div>
+
+                            <div class="text-secondary small">Sudah selesai</div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="mt-3">
+
+                        <div class="d-flex justify-content-between text-secondary small mb-1">
+
+                            <span>Upload Progress</span>
+
+                            <span class="fw-semibold" id="fbProgressText">0 / 0</span>
+
+                        </div>
+
+                        <div class="progress progress-sm" style="height:6px;">
+
+                            <div class="progress-bar bg-success" id="fbProgressBar"
+
+                                 style="width:0%"
+
+                                 role="progressbar"
+
+                                 aria-valuenow="0"
+
+                                 aria-valuemin="0"
+
+                                 aria-valuemax="100">
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Upload Console -->
+            <div class="card mt-2">
+
+                <div class="card-header">
+
+                    <div class="d-flex justify-content-between align-items-center w-100">
+
+                        <h3 class="card-title mb-0">
+
+                            <i class="ti ti-terminal-2 me-2"></i>
+
+                            Upload Console
+
+                        </h3>
+
+                        <span
+
+                            id="logStatus"
+
+                            class="badge bg-green-lt">
+
+                            READY
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div id="logConsole">
+
+                    <div class="log-header">
+
+                        <div class="time">
+
+                            TIME
+
+                        </div>
+
+                        <div class="type">
+
+                            TYPE
+
+                        </div>
+
+                        <div class="message">
+
+                            MESSAGE
+
+                        </div>
+
+                    </div>
+
+                    <!-- JavaScript append log di sini -->
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+const jsonFile = document.getElementById("jsonFile");
+const pathList = document.getElementById("pathList");
+const btnRunner = document.getElementById("btnRunner");
+
+let isRunning = false;
+let stopRequested = false;
+let summary = { total: 0, valid: 0, completed: 0, invalid: 0 };
+
+
+/* ==========================================================
+   Enable / Disable START
+========================================================== */
+function updateStartButton() {
+
+    if (isRunning) {
+        return;
+    }
+
+    const hasText = pathList.value.trim().length > 0;
+
+    btnRunner.disabled = !hasText;
+
+}
+
+/* ==========================================================
+   Runner Button
+========================================================== */
+
+function setRunnerButton(running, stopping) {
+
+    isRunning = running;
+    stopRequested = running && stopping;
+
+    if (running) {
+
+        if (stopping) {
+
+            // STOPPING state — stop sudah diminta backend, tombol nonaktif
+            // sampai browser benar-benar ditutup (running=false).
+            btnRunner.disabled = true;
+
+            btnRunner.classList.remove("btn-success");
+            btnRunner.classList.add("btn-danger");
+
+            btnRunner.innerHTML = `
+                <i class="ti ti-player-stop me-1"></i>
+                STOPPING...
+            `;
+
+        }
+        else {
+
+            btnRunner.disabled = false;
+
+            btnRunner.classList.remove("btn-success");
+            btnRunner.classList.add("btn-danger");
+
+            btnRunner.innerHTML = `
+                <i class="ti ti-player-stop-filled me-1"></i>
+                STOP
+            `;
+
+        }
+
+    }
+    else {
+
+        stopRequested = false;
+
+        btnRunner.classList.remove("btn-danger");
+        btnRunner.classList.add("btn-success");
+
+        btnRunner.innerHTML = `
+            <i class="ti ti-player-play-filled me-1"></i>
+            START
+        `;
+
+        updateStartButton();
+
+    }
+
+}
+
+/* ==========================================================
+   Summary Card
+========================================================== */
+
+function updateSummary() {
+
+    document.getElementById("sumTotal").textContent = summary.total;
+
+    document.getElementById("sumValid").textContent = summary.valid;
+
+    document.getElementById("sumInvalid").textContent = summary.invalid;
+
+    document.getElementById("sumCompleted").textContent = summary.completed;
+
+}
+
+function updateProgress(data) {
+
+    const info = data.info || {};
+
+    const done = info.success_count || 0;
+
+    const total = info.total_jobs || 0;
+
+    const persen = info.progress_persen || 0;
+
+    document.getElementById("fbProgressText").textContent = done + " / " + total;
+
+    const bar = document.getElementById("fbProgressBar");
+
+    bar.style.width = persen + "%";
+
+    bar.setAttribute("aria-valuenow", persen);
+
+}
+
+/* ==========================================================
+   JSON Loader
+========================================================== */
+
+jsonFile.addEventListener("change", async function () {
+
+    const file = this.files[0];
+
+    if (!file) {
+
+        pathList.value = "";
+
+        summary = { total: 0, valid: 0, completed: 0, invalid: 0 };
+
+        updateSummary();
+
+        updateStartButton();
+
+        return;
+
+    }
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    try {
+
+        const response = await fetch("/upload_video/facebook/get_paths", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+
+            throw new Error("Request gagal.");
+
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+
+            alert(result.message || "Gagal membaca workflow.");
+
+            pathList.value = "";
+
+            summary = { total: 0, valid: 0, completed: 0, invalid: 0 };
+
+            updateSummary();
+
+            updateStartButton();
+
+            return;
+
+        }
+
+        pathList.value = result.paths.join("\n");
+
+        summary = result.summary || { total: 0, valid: 0, completed: 0, invalid: 0 };
+
+        updateSummary();
+
+        updateStartButton();
+
+        // Muat ulang log (termasuk log validasi) dari server
+        updateStatus();
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+        alert("Gagal membaca file JSON.");
+
+        pathList.value = "";
+
+        summary = { total: 0, valid: 0, completed: 0, invalid: 0 };
+
+        updateSummary();
+
+        updateStartButton();
+
+    }
+
+});
+
+/* ==========================================================
+   Manual Edit Path
+========================================================== */
+
+pathList.addEventListener("input", updateStartButton);
+
+
+/* ==========================================================
+   START / STOP
+========================================================== */
+
+btnRunner.addEventListener("click", async function () {
+
+    if (isRunning) {
+
+        // Saat STOPPING, tombol disabled — guard ekstra untuk keamanan.
+        if (stopRequested) {
+            return;
+        }
+
+        const ok = confirm(
+            "Yakin ingin menghentikan upload?\n\nJob yang sedang berjalan akan diselesaikan terlebih dahulu."
+        );
+
+        if (!ok) {
+            return;
+        }
+
+        const res = await fetch("/upload_video/facebook/stop", {
+            method: "POST"
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            alert(result.message || "Gagal menghentikan upload.");
+        }
+
+        return;
+
+    }
+
+    const text = pathList.value.trim();
+
+    if (text.length === 0) {
+
+        alert("Video Path List masih kosong.");
+
+        return;
+
+    }
+
+    const form = new FormData();
+
+    form.append("path_list", text);
+
+    try {
+
+        const response = await fetch("/upload_video/facebook/start", {
+
+            method: "POST",
+
+            body: form
+
+        });
+
+        const result = await response.json();
+
+        console.log(result);
+
+        if (result.success) {
+
+            setRunnerButton(true);
+
+        }
+        else {
+
+            alert(result.message || "Gagal memulai upload.");
+
+        }
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+        alert("Tidak dapat terhubung ke server.");
+
+    }
+
+});
+
+
+/* ==========================================================
+   Status Polling
+========================================================== */
+
+async function updateStatus() {
+
+    try {
+
+        const res = await fetch("/upload_video/facebook/status");
+
+        const data = await res.json();
+
+        setRunnerButton(data.running, data.stop_requested === true);
+
+        document.getElementById("logStatus").textContent =
+            data.running
+                ? (data.stop_requested ? "STOPPING..." : "RUNNING")
+                : "READY";
+
+        const consoleDiv = document.getElementById("logConsole");
+
+        const header = consoleDiv.querySelector(".log-header");
+
+        consoleDiv.innerHTML = "";
+
+        consoleDiv.appendChild(header);
+
+        if (Array.isArray(data.validation_logs)) {
+
+            data.validation_logs.forEach(log => {
+
+                consoleDiv.insertAdjacentHTML("beforeend", log);
+
+            });
+
+        }
+
+        if (Array.isArray(data.logs)) {
+
+            data.logs.forEach(log => {
+
+                consoleDiv.insertAdjacentHTML("beforeend", log);
+
+            });
+
+        }
+
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+
+        updateProgress(data);
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+    }
+
+}
+
+
+/* ==========================================================
+   Init
+========================================================== */
+
+updateStartButton();
+
+updateSummary();
+
+updateStatus();
+
+setInterval(updateStatus, 1000);
+</script>
+{% endblock %}
