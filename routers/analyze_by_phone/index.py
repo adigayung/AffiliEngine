@@ -31,11 +31,15 @@ def analyze_by_phone():
     print("ok request masuk")
 
     # ambil file
-    image = request.files.get("image")
-
+    try:
+        image = request.files.get("image")
+        print("image beres", flush=True)
+    except Exception as e:
+        print("ERROR:", repr(e), flush=True)
+        raise
     # ambil url
     url = extract_url(request.form.get("url"))
-
+    print("url beres")
     if image:
         save_dir = "./upload"
         os.makedirs(save_dir, exist_ok=True)
