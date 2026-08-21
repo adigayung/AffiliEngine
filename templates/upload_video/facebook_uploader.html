@@ -171,6 +171,96 @@
 
                 <div class="card-body">
 
+                    <!-- Phase 4: Metode Upload — Via PC (default) / Via HP -->
+                    <div class="mb-4">
+
+                        <label class="form-label">
+
+                            Metode Upload
+
+                        </label>
+
+                        <div class="btn-group w-100" role="group" aria-label="Metode Upload">
+
+                            <input
+
+                                type="radio"
+
+                                class="btn-check"
+
+                                name="uploadMethod"
+
+                                id="methodPc"
+
+                                value="pc"
+
+                                checked>
+
+                            <label class="btn btn-outline-primary" for="methodPc">
+
+                                <i class="ti ti-device-desktop me-1"></i>
+
+                                Via PC (Selenium)
+
+                            </label>
+
+                            <input
+
+                                type="radio"
+
+                                class="btn-check"
+
+                                name="uploadMethod"
+
+                                id="methodHp"
+
+                                value="hp">
+
+                            <label class="btn btn-outline-primary" for="methodHp">
+
+                                <i class="ti ti-device-mobile me-1"></i>
+
+                                Via HP (Android)
+
+                            </label>
+
+                        </div>
+
+                        <div class="form-hint">
+
+                            Via PC: Selenium browser (behavior lama). Via HP: queue diproses
+
+                            aplikasi Android melalui WebSocket.
+
+                        </div>
+
+                    </div>
+
+                    <!-- Phase 4: status khusus mode Via HP (Android / queue) -->
+                    <div id="hpStatusBox" class="mb-4 d-none">
+
+                        <div class="alert alert-info py-2 mb-0">
+
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+
+                                <span class="fw-semibold">Status HP:</span>
+
+                                <span id="androidBadge" class="badge bg-danger-lt">Android Disconnected</span>
+
+                                <span id="hpRunningBadge" class="badge bg-secondary-lt">Queue idle</span>
+
+                            </div>
+
+                            <div class="small text-secondary mt-1">
+
+                                Mode Via HP: jalankan aplikasi Android (WebSocket) untuk memproses queue Facebook.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
                     <div class="mb-3">
 
                         <label class="form-label">
@@ -404,6 +494,49 @@ let isRunning = false;
 let stopRequested = false;
 let summary = { total: 0, valid: 0, completed: 0, invalid: 0 };
 
+/* ==========================================================
+   Metode Upload — Via PC (default) / Via HP
+========================================================== */
+let uploadMethod = "pc";
+
+const methodPc = document.getElementById("methodPc");
+const methodHp = document.getElementById("methodHp");
+const hpStatusBox = document.getElementById("hpStatusBox");
+const androidBadge = document.getElementById("androidBadge");
+const hpRunningBadge = document.getElementById("hpRunningBadge");
+
+function applyMethodUI() {
+    if (uploadMethod === "hp") {
+        hpStatusBox.classList.remove("d-none");
+    }
+    else {
+        hpStatusBox.classList.add("d-none");
+    }
+}
+
+[methodPc, methodHp].forEach(function (radio) {
+    radio.addEventListener("change", function () {
+        if (this.checked) {
+            uploadMethod = this.value;
+            applyMethodUI();
+            updateStatus();
+        }
+    });
+});
+
+function updateHpStatus(data) {
+    if (uploadMethod !== "hp") {
+        return;
+    }
+    const connected = data.android_connected === true;
+    androidBadge.textContent = connected ? "Android Connected" : "Android Disconnected";
+    androidBadge.className = "badge " + (connected ? "bg-success-lt" : "bg-danger-lt");
+
+    const running = data.running === true;
+    hpRunningBadge.textContent = running ? "Queue running" : "Queue idle";
+    hpRunningBadge.className = "badge " + (running ? "bg-green-lt" : "bg-secondary-lt");
+}
+
 
 /* ==========================================================
    Enable / Disable START
@@ -630,8 +763,13 @@ btnRunner.addEventListener("click", async function () {
             return;
         }
 
+        const stopBody = new URLSearchParams();
+
+        stopBody.append("method", uploadMethod);
+
         const res = await fetch("/upload_video/facebook/stop", {
-            method: "POST"
+            method: "POST",
+            body: stopBody
         });
 
         const result = await res.json();
@@ -657,6 +795,8 @@ btnRunner.addEventListener("click", async function () {
     const form = new FormData();
 
     form.append("path_list", text);
+
+    form.append("method", uploadMethod);
 
     try {
 
@@ -703,11 +843,13 @@ async function updateStatus() {
 
     try {
 
-        const res = await fetch("/upload_video/facebook/status");
+        const res = await fetch("/upload_video/facebook/status?method=" + uploadMethod);
 
         const data = await res.json();
 
         setRunnerButton(data.running, data.stop_requested === true);
+
+        updateHpStatus(data);
 
         document.getElementById("logStatus").textContent =
             data.running
@@ -759,6 +901,8 @@ async function updateStatus() {
 /* ==========================================================
    Init
 ========================================================== */
+
+applyMethodUI();
 
 updateStartButton();
 
