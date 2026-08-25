@@ -65,7 +65,7 @@ jobs_json = [
 {
     "id": 5,
     "cmd": "click",
-    "delay": 3000,
+    "delay": 1000,
     "status": "pending",
     "keterangan": "Pilih Tab video",
     "data": {
@@ -79,35 +79,7 @@ jobs_json = [
 {
     "id": 6,
     "cmd": "click",
-    "delay": 3000,
-    "status": "pending",
-    "keterangan": "Pilih video yang akan di upload",
-    "data": {
-        "target": {
-            "type": "point",
-            "x": 170,
-            "y": 540
-        }
-    }
-},
-{
-    "id": 8,
-    "cmd": "click",
-    "delay": 3000,
-    "status": "pending",
-    "keterangan": "back dulu, anti bug",
-    "data": {
-        "target": {
-            "type": "point",
-            "x": 776,
-            "y": 2336
-        }
-    }
-},
-{
-    "id": 6,
-    "cmd": "click",
-    "delay": 3000,
+    "delay": 1000,
     "status": "pending",
     "keterangan": "Pilih video yang akan di upload",
     "data": {
@@ -137,12 +109,68 @@ jobs_json = [
     "cmd": "click",
     "delay": 3000,
     "status": "pending",
+    "keterangan": "back dulu, anti bug",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 776,
+            "y": 2336
+        }
+    }
+},
+{
+    "id": 8,
+    "cmd": "click",
+    "delay": 3000,
+    "status": "pending",
+    "keterangan": "back dulu, anti bug",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 776,
+            "y": 2336
+        }
+    }
+},
+{
+    "id": 6,
+    "cmd": "click",
+    "delay": 1000,
+    "status": "pending",
+    "keterangan": "Pilih video yang akan di upload",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 170,
+            "y": 540
+        }
+    }
+},
+{
+    "id": 7,
+    "cmd": "click",
+    "delay": 3000,
+    "status": "pending",
+    "keterangan": "sudah select video tekan 'Berikutnya'",
+    "data": {
+        "target": {
+            "type": "point",
+            "x": 779,
+            "y": 2159
+        }
+    }
+},
+{
+    "id": 8,
+    "cmd": "click",
+    "delay": 2500,
+    "status": "pending",
     "keterangan": "tekan 'Berikutnya' Lagi",
     "data": {
         "target": {
             "type": "point",
-            "x": 787,
-            "y": 2164
+            "x": 779,
+            "y": 2159
         }
     }
 },
@@ -150,20 +178,6 @@ jobs_json = [
     "id": 9,
     "cmd": "click",
     "delay": 4000,
-    "status": "pending",
-    "keterangan": "Checked 'Konfirmasi Penggunaan Music'",
-    "data": {
-        "target": {
-            "type": "point",
-            "x": 65,
-            "y": 2040
-        }
-    }
-},
-{
-    "id": 9,
-    "cmd": "click",
-    "delay": 1000,
     "status": "pending",
     "keterangan": "Select textbox Deskripsi",
     "data": {
