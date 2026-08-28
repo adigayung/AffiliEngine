@@ -451,3 +451,212 @@ def remove_schedule(creator_id):
         message += " " + " ".join(notes)
 
     return jsonify({"success": True, "message": message})
+
+
+# ==============================
+# BULK DELETE UPLOAD JOBS (fitur baru)
+# ==============================
+
+def _bulk_delete_pending_jobs(creator_id, job_ids):
+    """
+    Hapus banyak upload_jobs (status pending SAJA) milik creator dalam satu
+    transaction, lalu bersihkan schedule_batches yang sudah tidak memiliki
+    upload_jobs.
+
+    Aturan:
+    - Data job diambil langsung dari database (id, batch_id, status, folder).
+    - Hanya status 'pending' yang diproses; scheduled/uploaded diabaikan.
+    - schedule_batches dihapus HANYA jika COUNT(upload_jobs) per batch = 0.
+
+    Returns:
+        dict atau None (None = error database, transaction di-rollback):
+        {
+            "deleted_ids": [int],
+            "skipped_ids": [int],
+            "removed_batches": [int],
+            "folders": [str],
+        }
+    """
+    placeholders = ", ".join(["%s"] * len(job_ids))
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. Ambil data langsung dari database (JANGAN percaya path frontend)
+            cursor.execute(
+                f"""
+                SELECT id, batch_id, status, folder
+                FROM upload_jobs
+                WHERE creator_id = %s AND id IN ({placeholders})
+                """,
+                [creator_id] + list(job_ids)
+            )
+            rows = cursor.fetchall()
+
+            pending_ids = [r["id"] for r in rows if r.get("status") == "pending"]
+            skipped_ids = [r["id"] for r in rows if r.get("status") != "pending"]
+            batch_ids = sorted({
+                r["batch_id"]
+                for r in rows
+                if r.get("status") == "pending" and r.get("batch_id")
+            })
+            folders = [
+                r["folder"]
+                for r in rows
+                if r.get("status") == "pending" and r.get("folder")
+            ]
+
+            if not pending_ids:
+                return {
+                    "deleted_ids": [],
+                    "skipped_ids": skipped_ids,
+                    "removed_batches": [],
+                    "folders": [],
+                }
+
+            # 2. Hapus job yang valid (pending + milik creator).
+            #    Filter status='pending' diulang di SQL sebagai double-check.
+            del_placeholders = ", ".join(["%s"] * len(pending_ids))
+            cursor.execute(
+                f"""
+                DELETE FROM upload_jobs
+                WHERE creator_id = %s
+                  AND status = 'pending'
+                  AND id IN ({del_placeholders})
+                """,
+                [creator_id] + pending_ids
+            )
+
+            # 3. Bersihkan schedule_batches yang sudah tidak punya upload_jobs.
+            removed_batches = []
+            for batch_id in batch_ids:
+                cursor.execute(
+                    "SELECT COUNT(*) AS cnt FROM upload_jobs WHERE batch_id = %s",
+                    (batch_id,)
+                )
+                cnt = cursor.fetchone()["cnt"]
+                if cnt == 0:
+                    cursor.execute(
+                        "DELETE FROM schedule_batches WHERE id = %s AND creator_id = %s",
+                        (batch_id, creator_id)
+                    )
+                    removed_batches.append(batch_id)
+
+        conn.commit()
+
+        return {
+            "deleted_ids": pending_ids,
+            "skipped_ids": skipped_ids,
+            "removed_batches": removed_batches,
+            "folders": folders,
+        }
+
+    except Exception as e:
+        conn.rollback()
+        print(f"_bulk_delete_pending_jobs() error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def _is_job_folder(path):
+    """
+    Validasi folder job: leaf DAN parent-nya harus folder schedule
+    (%Y_%m_%d_%H_%M). Folder job selalu berada DI DALAM folder batch,
+    sehingga struktur depth-2 ini memastikan yang dihapus adalah folder
+    job (leaf), bukan folder batch atau direktori di atasnya.
+    """
+    if not path:
+        return False
+    path = os.path.normpath(path)
+    if not _is_schedule_folder(path):
+        return False
+    parent = os.path.dirname(path)
+    return bool(parent) and _is_schedule_folder(parent)
+
+
+def _delete_job_folders(folders):
+    """
+    Hapus folder project/job dari disk (opsional, delete_folders=true).
+
+    Hanya path yang berasal dari database yang diproses. Path dari request
+    frontend TIDAK PERNAH dipakai. Mengembalikan list catatan (notes).
+    """
+    notes = []
+    for folder in folders or []:
+        if not folder:
+            continue
+        if not os.path.isdir(folder):
+            notes.append(f"Folder {folder} sudah tidak ada di disk.")
+            continue
+        if not _is_job_folder(folder):
+            notes.append(
+                f"Folder {folder} tidak dihapus karena bukan folder job yang valid."
+            )
+            continue
+        try:
+            shutil.rmtree(folder)
+        except Exception as e:
+            notes.append(f"Gagal menghapus folder {folder}: {e}")
+    return notes
+
+
+@creator_report_bp.route("/<int:creator_id>/report/bulk_delete", methods=["POST"])
+def bulk_delete_upload_jobs(creator_id):
+    """
+    Bulk delete upload jobs (hanya status pending) milik creator.
+
+    Request JSON:
+        {"job_ids": [101, 102, 103], "delete_folders": false}
+
+    - Data job dibaca dari database berdasarkan job_ids (folder path dari DB).
+    - Hanya job status 'pending' yang diproses; scheduled/uploaded tetap aman.
+    - schedule_batches yang sudah tidak memiliki upload_jobs ikut dihapus.
+    - delete_folders (default false) menghapus folder project/job dari disk
+      dengan validasi ketat (folder job, bukan folder parent).
+    """
+    payload = request.get_json(silent=True) or {}
+    raw_ids = payload.get("job_ids")
+    delete_folders = bool(payload.get("delete_folders", False))
+
+    try:
+        job_ids = [int(x) for x in raw_ids]
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "job_ids tidak valid."})
+
+    if not job_ids:
+        return jsonify({"success": False, "message": "Tidak ada job yang dipilih."})
+
+    result = _bulk_delete_pending_jobs(creator_id, job_ids)
+    if result is None:
+        return jsonify({
+            "success": False,
+            "message": "Terjadi kesalahan saat menghapus data dari database.",
+        })
+
+    deleted_ids = result["deleted_ids"]
+    if not deleted_ids:
+        message = "Tidak ada upload job yang bisa dihapus (hanya status pending yang diizinkan)."
+        if result["skipped_ids"]:
+            message += " Job dengan status selain pending diabaikan."
+        return jsonify({"success": False, "message": message})
+
+    notes = []
+    if delete_folders:
+        notes.extend(_delete_job_folders(result["folders"]))
+
+    message = f"{len(deleted_ids)} upload job berhasil dihapus."
+    if result["removed_batches"]:
+        message += f" {len(result['removed_batches'])} batch kosong ikut dihapus."
+    if result["skipped_ids"]:
+        message += (
+            f" {len(result['skipped_ids'])} job diabaikan "
+            f"karena bukan status pending."
+        )
+    if notes:
+        message += " " + " ".join(notes)
+
+    return jsonify({
+        "success": True,
+        "message": message,
+        "deleted_ids": deleted_ids,
+    })
