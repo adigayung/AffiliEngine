@@ -118,6 +118,10 @@ def parse_ocr(data):
         "keranjang": None
     }
 
+    # True bila ulasan sudah terisi dari rating "Skor produk" X/5.0
+    # (PRIORITAS 1) -> hitungan ulasan UI lama tidak boleh menimpanya.
+    ulasan_dari_rating = False
+
     for item in data:
 
         low = item.lower()
@@ -172,15 +176,42 @@ def parse_ocr(data):
 
         elif "ulasan" in low:
 
-            value = (
+            # PRIORITAS 1 — UI baru: rating "Skor produk" X/5.0
+            # contoh crop: "ulasan 4.0/5.0" -> ulasan = 4.0
+            m_rating = re.search(
+                r'([\d.,Oo]+)\s*/\s*5(?:[.Oo]0)?',
                 low
-                .replace("ulasan positif", "")
-                .replace("ulasan", "")
-                .replace("positif", "")
-                .strip()
             )
 
-            hasil["ulasan"] = convert_number(value)
+            if m_rating:
+
+                try:
+
+                    hasil["ulasan"] = float(
+                        m_rating.group(1)
+                        .replace("O", "0")
+                        .replace("o", "0")
+                        .replace(",", ".")
+                    )
+
+                    ulasan_dari_rating = True
+
+                except:
+
+                    hasil["ulasan"] = None
+
+            # PRIORITAS 2/3 — UI lama / fallback: hitungan ulasan
+            elif not ulasan_dari_rating:
+
+                value = (
+                    low
+                    .replace("ulasan positif", "")
+                    .replace("ulasan", "")
+                    .replace("positif", "")
+                    .strip()
+                )
+
+                hasil["ulasan"] = convert_number(value)
 
         # ====================================================
         # Pesanan

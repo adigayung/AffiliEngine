@@ -301,6 +301,90 @@ class OCRProcessor:
         return best_box
 
     # ==========================================================
+    # Cari box rating "X/5.0" yang sebaris dengan label
+    # ==========================================================
+    def _find_rating_box(self, results, label_boxes):
+        """
+        Cari rating "X/5.0" (mis. "4.0/5.0") yang berdekatan secara
+        spasial dengan label "Skor produk ...".
+
+        Label dan rating bisa berada pada OCR box yang berbeda,
+        jadi gunakan kedekatan bounding box:
+        - rating harus sebaris (overlap vertikal) dengan label;
+        - rating adalah box terdekat secara horizontal.
+        """
+        all_pts = []
+
+        for box in label_boxes:
+            all_pts.extend(box)
+
+        all_pts = np.array(all_pts).astype(int)
+
+        l_x_min = np.min(all_pts[:, 0])
+        l_x_max = np.max(all_pts[:, 0])
+
+        l_y_min = np.min(all_pts[:, 1])
+        l_y_max = np.max(all_pts[:, 1])
+
+        l_cy = (l_y_min + l_y_max) / 2
+
+        pattern = re.compile(
+            r'[\d.,Oo]+\s*/\s*5(?:[.Oo]0)?'
+        )
+
+        best_box = None
+        best_score = 999999
+
+        for bbox, text, conf in results:
+
+            if not pattern.search(text):
+                continue
+
+            if any(
+                np.array_equal(bbox, lb)
+                for lb in label_boxes
+            ):
+                continue
+
+            pts = np.array(bbox).astype(int)
+
+            x_min = np.min(pts[:, 0])
+            x_max = np.max(pts[:, 0])
+
+            y_min = np.min(pts[:, 1])
+            y_max = np.max(pts[:, 1])
+
+            # Harus sebaris dengan label (overlap vertikal)
+            row_overlap = (
+                (y_min < l_y_max)
+                and
+                (y_max > l_y_min)
+            )
+
+            if not row_overlap:
+                continue
+
+            # Jarak horizontal: kanan label (umum), kiri dipenalti
+            if x_min >= l_x_max:
+                h_gap = x_min - l_x_max
+            elif x_max <= l_x_min:
+                h_gap = (l_x_min - x_max) + 50
+            else:
+                h_gap = 0  # overlap horizontal (rating menyatu label)
+
+            v_off = abs(
+                ((y_min + y_max) / 2) - l_cy
+            )
+
+            score = h_gap + 2 * v_off
+
+            if score < best_score:
+                best_score = score
+                best_box = bbox
+
+        return best_box
+
+    # ==========================================================
     # Crop bagian kedua
     # ==========================================================
     def crop_kedua_img(
@@ -308,11 +392,91 @@ class OCRProcessor:
                 img,
                 results,
                 start_index=3
-        ):
+                ):
 
             h, w = img.shape[:2]
 
             idx = start_index
+
+            # Menyimpan index crop -> label teks yang harus disisipkan
+            # di depan hasil OCR crop tersebut.
+            labeled = {}
+
+            # ==================================================
+            # PRIORITAS 1 — "Skor produk" -> rating X/5.0 -> ulasan
+            # UI terbaru menampilkan rating produk (mis. "4.0/5.0")
+            # sebagai box terpisah di samping label "Skor produk ...".
+            # ==================================================
+            skor_rating_found = False
+
+            skor_label_boxes = self._find_label_boxes(
+                results,
+                "skor produk"
+            )
+
+            # Fallback: bila OCR memecah label menjadi box terpisah
+            if not skor_label_boxes:
+                skor_label_boxes = self._find_label_boxes(
+                    results,
+                    "skor"
+                )
+
+            rating_box = None
+
+            if skor_label_boxes:
+
+                rating_box = self._find_rating_box(
+                    results,
+                    skor_label_boxes
+                )
+
+                # Bila rating menyatu dalam box label itu sendiri
+                if rating_box is None:
+
+                    for lb in skor_label_boxes:
+
+                        for bbox, text, conf in results:
+
+                            if (
+                                np.array_equal(bbox, lb)
+                                and re.search(
+                                    r'[\d.,Oo]+\s*/\s*5(?:[.Oo]0)?',
+                                    text
+                                )
+                            ):
+                                rating_box = bbox
+                                break
+
+                        if rating_box is not None:
+                            break
+
+            if rating_box is not None:
+
+                skor_rating_found = True
+
+                rpts = np.array(rating_box).astype(int)
+
+                rx1 = max(0, np.min(rpts[:, 0]) - 12)
+                ry1 = max(0, np.min(rpts[:, 1]) - 6)
+
+                rx2 = min(w, np.max(rpts[:, 0]) + 12)
+                ry2 = min(h, np.max(rpts[:, 1]) + 6)
+
+                self.save_crop(
+                    img[ry1:ry2, rx1:rx2],
+                    idx
+                )
+
+                # Label "ulasan" disisipkan di depan hasil OCR crop
+                labeled[idx] = "ulasan"
+
+                idx += 1
+
+            else:
+                logger(
+                    "debug",
+                    "skor produk tidak ditemukan (fallback ulasan aktif)."
+                )
 
             # value_char dihapus agar pencarian angka bersifat universal
             # (bebas untuk ribuan 'k', persen '%', atau angka satuan biasa)
@@ -323,10 +487,6 @@ class OCRProcessor:
                 {"label": "pembeli"},
                 {"label": "stok tersedia"},
             ]
-
-            # Menyimpan index crop -> label teks yang harus disisipkan
-            # di depan hasil OCR crop tersebut.
-            labeled = {}
 
             for target in targets:
 
@@ -512,7 +672,12 @@ class OCRProcessor:
                         for _, t, _ in results
                     )
 
-                    if not has_secondary_text:
+                    # PRIORITAS 3 — hanya fallback bila rating
+                    # "Skor produk" (PRIORITAS 1) tidak ditemukan
+                    if (
+                        not has_secondary_text
+                        and not skor_rating_found
+                    ):
 
                         secondary_box = self._find_second_value_below(
                             results,
