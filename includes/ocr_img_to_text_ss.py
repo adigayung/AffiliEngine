@@ -1,5 +1,6 @@
 # FILE : includes\ocr_img_to_text_ss.py
 import os
+import re
 import cv2
 import easyocr
 import numpy as np
@@ -175,6 +176,131 @@ class OCRProcessor:
         return idx
     
     # ==========================================================
+    # Cari box label dengan word boundary + preferensi terpendek
+    # ==========================================================
+    def _find_label_boxes(self, results, keyword):
+        """
+        Temukan box label untuk sebuah keyword.
+
+        Menggunakan word boundary agar keyword tidak tertukar dengan
+        potongan kata lain, lalu memprioritaskan box dengan sisa teks
+        terpendek (label yang berdiri sendiri).
+
+        Contoh penting:
+            keyword "pesanan" -> box 'Pesanan' (bukan
+            'Penghasilan menurut sumber pesanan').
+        """
+        pattern = re.compile(
+            r'\b' + re.escape(keyword) + r'\b',
+            re.IGNORECASE
+        )
+
+        candidates = []
+
+        for bbox, text, conf in results:
+
+            txt = text.lower()
+
+            if pattern.search(txt):
+
+                remainder = pattern.sub('', txt).strip()
+
+                candidates.append({
+                    "bbox": bbox,
+                    "remainder_len": len(remainder),
+                })
+
+        if not candidates:
+            return []
+
+        min_remainder = min(
+            c["remainder_len"]
+            for c in candidates
+        )
+
+        return [
+            c["bbox"]
+            for c in candidates
+            if c["remainder_len"] == min_remainder
+        ]
+
+    # ==========================================================
+    # Cari value kedua di bawah value pertama (kolom yang sama)
+    # ==========================================================
+    def _find_second_value_below(
+            self,
+            results,
+            value_box,
+            label_boxes=None
+    ):
+        """
+        Cari nilai kedua yang berada di bawah `value_box` dalam
+        kolom yang sama. Dipakai untuk mengambil value sekunder pada
+        kartu metrik UI TikTok terbaru (contoh: 'ulasan' tampil tepat
+        di bawah value 'pesanan' tanpa label teks).
+        """
+        vpts = np.array(value_box).astype(int)
+
+        v_x_min = np.min(vpts[:, 0])
+        v_x_max = np.max(vpts[:, 0])
+        v_y_max = np.max(vpts[:, 1])
+
+        excluded = label_boxes or []
+
+        best_box = None
+        best_score = 999999
+
+        for bbox, text, conf in results:
+
+            txt = text.lower()
+
+            # Wajib mengandung angka dan bukan label / value utama
+            if not any(c.isdigit() for c in txt):
+                continue
+
+            if any(np.array_equal(bbox, lb) for lb in excluded):
+                continue
+
+            if np.array_equal(bbox, value_box):
+                continue
+
+            pts = np.array(bbox).astype(int)
+
+            x_min = np.min(pts[:, 0])
+            x_max = np.max(pts[:, 0])
+
+            y_min = np.min(pts[:, 1])
+
+            # Harus berada di bawah value pertama
+            if y_min <= v_y_max:
+                continue
+
+            v_dist = y_min - v_y_max
+
+            # Jarak horizontal: 0 jika overlap kolom, jika tidak gap
+            h_overlap = (
+                min(x_max, v_x_max)
+                - max(x_min, v_x_min)
+            )
+
+            if h_overlap > 0:
+                h_penalty = 0
+            else:
+                h_penalty = max(
+                    x_min - v_x_max,
+                    v_x_min - x_max,
+                    0
+                )
+
+            score = v_dist + 0.6 * h_penalty
+
+            if score < best_score:
+                best_score = score
+                best_box = bbox
+
+        return best_box
+
+    # ==========================================================
     # Crop bagian kedua
     # ==========================================================
     def crop_kedua_img(
@@ -188,43 +314,49 @@ class OCRProcessor:
 
             idx = start_index
 
-            # value_char dihapus agar pencarian angka bersifat universal (bebas untuk ribuan 'k', persen '%', atau angka satuan biasa)
+            # value_char dihapus agar pencarian angka bersifat universal
+            # (bebas untuk ribuan 'k', persen '%', atau angka satuan biasa)
             targets = [
-                {"label": "pesanan"},
+                {"label": "pesanan", "secondary": "ulasan"},
                 {"label": "ctr"},
                 {"label": "jumlah kreator"},
                 {"label": "pembeli"},
                 {"label": "stok tersedia"},
             ]
 
+            # Menyimpan index crop -> label teks yang harus disisipkan
+            # di depan hasil OCR crop tersebut.
+            labeled = {}
+
             for target in targets:
 
-                label_boxes = []
-                value_box = None
-
                 # -------------------------------------
-                # Cari label
+                # Cari label (word boundary + preferensi terpendek)
                 # -------------------------------------
-                for bbox, text, conf in results:
+                label_boxes = self._find_label_boxes(
+                    results,
+                    target["label"]
+                )
 
-                    txt = text.lower()
+                # Khusus pembeli: label berlanjut pada box
+                # "menambahkan ke keranjang"
+                if target["label"] == "pembeli":
 
-                    if target["label"] in txt:
+                    for bbox2, text2, conf2 in results:
 
-                        label_boxes.append(bbox)
+                        txt2 = text2.lower()
 
-                        if target["label"] == "pembeli":
+                        if (
+                            "menambahkan" in txt2
+                            or
+                            "keranjang" in txt2
+                        ):
 
-                            for bbox2, text2, conf2 in results:
-
-                                txt2 = text2.lower()
-
-                                if (
-                                    "menambahkan" in txt2
-                                    or
-                                    "keranjang" in txt2
-                                ):
-                                    label_boxes.append(bbox2)
+                            if not any(
+                                np.array_equal(bbox2, lb)
+                                for lb in label_boxes
+                            ):
+                                label_boxes.append(bbox2)
 
                 if not label_boxes:
                     logger("debug", f"{target['label']} tidak ditemukan.")
@@ -246,20 +378,31 @@ class OCRProcessor:
                 l_y_min = np.min(all_pts[:, 1])
                 l_y_max = np.max(all_pts[:, 1])
 
+                l_cx = (l_x_min + l_x_max) / 2
+
                 # -------------------------------------
-                # Cari value (Menggunakan Validasi Overlap Jalur Kolom X)
+                # Cari value dengan skor gabungan
+                # (jarak vertikal + penalti gap horizontal +
+                #  penalti selisih center X)
                 # -------------------------------------
-                min_dist = 999999
+                value_box = None
+                best_score = 999999
 
                 for bbox, text, conf in results:
 
                     txt = text.lower()
 
-                    # Cek agar box ini tidak berbenturan dengan box label yang sudah diambil
-                    is_already_label = any(np.array_equal(bbox, lb) for lb in label_boxes)
+                    # Cek agar box ini tidak berbenturan dengan box label
+                    is_already_label = any(
+                        np.array_equal(bbox, lb)
+                        for lb in label_boxes
+                    )
 
-                    # Kondisi: wajib mengandung angka dan bukan bagian dari label
-                    if any(c.isdigit() for c in txt) and not is_already_label:
+                    # Kondisi: wajib mengandung angka & bukan bagian label
+                    if (
+                        any(c.isdigit() for c in txt)
+                        and not is_already_label
+                    ):
 
                         pts = np.array(bbox).astype(int)
 
@@ -269,46 +412,57 @@ class OCRProcessor:
                         v_y_min = np.min(pts[:, 1])
                         v_y_max = np.max(pts[:, 1])
 
-                        # Logika Overlap: Memastikan koordinat X angka berada di dalam
-                        # jangkauan kolom X milik label teks
-                        horizontal_overlap = (
-                            (v_x_min < l_x_max)
-                            and
-                            (v_x_max > l_x_min)
-                        )
-
-                        if not horizontal_overlap:
-                            continue
-
-                        # ==========================================
+                        # ==================================
                         # Khusus stok tersedia -> value di atas label
-                        # ==========================================
+                        # ==================================
                         if target["label"] == "stok tersedia":
 
-                            if v_y_max < l_y_min:
+                            if v_y_max >= l_y_min:
+                                continue
 
-                                dist = l_y_min - v_y_max
+                            v_dist = l_y_min - v_y_max
 
-                                if dist < min_dist:
-
-                                    min_dist = dist
-                                    value_box = bbox
-
-                        # ==========================================
+                        # ==================================
                         # Label lainnya -> value di bawah label
-                        # ==========================================
+                        # ==================================
                         else:
 
-                            if v_y_min > l_y_max:
+                            if v_y_min <= l_y_max:
+                                continue
 
-                                dist = v_y_min - l_y_max
+                            v_dist = v_y_min - l_y_max
 
-                                if dist < min_dist:
+                        # Jarak horizontal: 0 jika overlap kolom,
+                        # jika tidak berupa gap antar kolom
+                        h_overlap = (
+                            min(v_x_max, l_x_max)
+                            - max(v_x_min, l_x_min)
+                        )
 
-                                    min_dist = dist
-                                    value_box = bbox
+                        if h_overlap > 0:
+                            h_penalty = 0
+                        else:
+                            h_penalty = max(
+                                v_x_min - l_x_max,
+                                l_x_min - v_x_max,
+                                0
+                            )
 
-                # -------------------------------------
+                        # Penalti kecil untuk selisih center X
+                        v_cx = (v_x_min + v_x_max) / 2
+                        align_penalty = abs(v_cx - l_cx)
+
+                        score = (
+                            v_dist
+                            + 0.6 * h_penalty
+                            + 0.05 * align_penalty
+                        )
+
+                        if score < best_score:
+                            best_score = score
+                            value_box = bbox
+
+                                                # -------------------------------------
                 # Gabung value
                 # -------------------------------------
                 if value_box is not None:
@@ -339,6 +493,45 @@ class OCRProcessor:
                 x2 = min(w, x_max + pad_x)
                 y2 = min(h, y_max + pad_y)
 
+                # -------------------------------------
+                # Cari value sekunder (mis. ulasan di bawah pesanan)
+                # -------------------------------------
+                secondary_box = None
+                secondary_label = target.get("secondary")
+
+                if (
+                    secondary_label
+                    and value_box is not None
+                ):
+
+                    # Jika label sekunder sudah terdeteksi OCR
+                    # (UI lama), jangan generate ulang -> parser lama
+                    # sudah menangani lewat crop_per_img_per_line.
+                    has_secondary_text = any(
+                        secondary_label in t.lower()
+                        for _, t, _ in results
+                    )
+
+                    if not has_secondary_text:
+
+                        secondary_box = self._find_second_value_below(
+                            results,
+                            value_box,
+                            label_boxes
+                        )
+
+                        if secondary_box is not None:
+
+                            spts = np.array(
+                                secondary_box
+                            ).astype(int)
+
+                            s_y_min = np.min(spts[:, 1])
+
+                            # Batasi crop utama agar tidak ikut
+                            # memotong value sekunder
+                            y2 = min(y2, max(y1, s_y_min - 3))
+
                 crop = img[y1:y2, x1:x2]
 
                 self.save_crop(
@@ -348,7 +541,41 @@ class OCRProcessor:
 
                 idx += 1
 
-            return idx
+                # -------------------------------------
+                # Simpan crop value sekunder (ulasan)
+                # -------------------------------------
+                if secondary_box is not None:
+
+                    spts = np.array(secondary_box).astype(int)
+
+                    sx_min = np.min(spts[:, 0])
+                    sx_max = np.max(spts[:, 0])
+
+                    sy_min = np.min(spts[:, 1])
+                    sy_max = np.max(spts[:, 1])
+
+                    s_pad_x = 12
+                    s_pad_y = 6
+
+                    sx1 = max(0, sx_min - s_pad_x)
+                    sy1 = max(0, sy_min - s_pad_y)
+
+                    sx2 = min(w, sx_max + s_pad_x)
+                    sy2 = min(h, sy_max + s_pad_y)
+
+                    crop2 = img[sy1:sy2, sx1:sx2]
+
+                    self.save_crop(
+                        crop2,
+                        idx
+                    )
+
+                    # Label disisipkan di depan hasil OCR crop ini
+                    labeled[idx] = secondary_label
+
+                    idx += 1
+
+            return idx, labeled
     
     # ==========================================================
     # Bersihkan folder temp
@@ -402,7 +629,7 @@ class OCRProcessor:
         # ==========================================
         # Crop Kedua
         # ==========================================
-        self.crop_kedua_img(
+        next_index, labeled = self.crop_kedua_img(
 
             img,
             results,
@@ -415,10 +642,22 @@ class OCRProcessor:
             logger("debug", file)
 
             text = self.read_crop(file)
+
+            # Sisipkan label di depan hasil OCR crop value sekunder
+            # (contoh: crop '3,0K' di bawah pesanan -> 'ulasan 3,0K')
+            m = re.search(
+                r"text_(\d+)\.jpg$",
+                os.path.basename(file)
+            )
+
+            if m and int(m.group(1)) in labeled:
+
+                text = labeled[int(m.group(1))] + " " + text
+
             hasilnya.append(text)
             logger("debug", "isinya : " + text)
 
-        return hasilnya 
+        return hasilnya  
 
 if __name__ == "__main__":
 
