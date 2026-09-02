@@ -38,7 +38,8 @@ def analyze_product(
     image,
     product_link,
     enable_llm=True,
-    upload_folder="upload"
+    upload_folder="upload",
+    raw_data=None
 ):
     """
     Analisa produk TikTok Affiliate.
@@ -57,6 +58,15 @@ def analyze_product(
     upload_folder : str
         Folder upload sementara.
 
+    raw_data : dict | None
+        Metrik TikTok yang diinput manual (jalur NON-OCR):
+        {"komisi", "persentase_komisi", "rating", "pesanan",
+         "ctr", "kreator", "keranjang"}.
+        Bila None -> metrik diambil dari OCR screenshot (behavior lama).
+        Bila dict  -> proses OCR dilewati sepenuhnya, namun data produk
+        (title/description/price/vote/sold) tetap di-scrape via
+        get_info_tt_from_url().
+
     Returns
     -------
     dict
@@ -65,12 +75,9 @@ def analyze_product(
     extracted_data = {}
     hasil_llm = ""
     start_time = time.time()
-    
-    if image is None:
-        raise Exception("Image is None")
 
     ############################################################
-    # Ambil data dasar produk
+    # Ambil data dasar produk (SELALU via URL scraper)
     ############################################################
 
     data_dasar = get_info_tt_from_url(
@@ -78,51 +85,74 @@ def analyze_product(
         "./chromium"
     )
 
-    if isinstance(image, str):
-
-        filepath = image
-
-    # image berupa FileStorage (request.files["image"])
-    else:
-        ext = os.path.splitext(image.filename)[1]
-        filepath = os.path.join(
-            upload_folder,
-            data_dasar.get("tiktok_id_product", "temp") + ext
+    if not data_dasar:
+        raise Exception(
+            "Gagal mengambil data produk dari URL. "
+            "Pastikan URL produk valid dan dapat diakses."
         )
-        image.save(filepath)
-
-    debug_folder = os.path.join(
-        "debug",
-        "products",
-        data_dasar.get("tiktok_id_product", "")
-    )
-
-    os.makedirs(
-        debug_folder,
-        exist_ok=True
-    )
-
-    ss_file = os.path.join(
-        debug_folder,
-        datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-        + os.path.splitext(filepath)[1]
-    )
-
-    shutil.copy2(
-        filepath,
-        ss_file
-    )
 
     ############################################################
-    # OCR
+    # Sumber metrik TikTok: OCR screenshot ATAU input manual
     ############################################################
 
-    #processor = OCRProcessor()
-    processor = OCRProcessor(data_dasar.get("tiktok_id_product", "tanpa_id"))
+    if raw_data is not None:
 
-    raw_ocr_text = processor.run(filepath)
-    logger("info", "====================xxxxxxxxxxxxxxxxx=============================")
-    raw = parse_ocr(raw_ocr_text)
+        # Jalur input manual: metrik TikTok berasal dari form,
+        # proses OCR dilewati sepenuhnya.
+        raw = raw_data
+
+    else:
+
+        # Jalur OCR (behavior existing)
+
+        if image is None:
+            raise Exception("Image is None")
+
+        if isinstance(image, str):
+
+            filepath = image
+
+        # image berupa FileStorage (request.files["image"])
+        else:
+            ext = os.path.splitext(image.filename)[1]
+            filepath = os.path.join(
+                upload_folder,
+                data_dasar.get("tiktok_id_product", "temp") + ext
+            )
+            image.save(filepath)
+
+        debug_folder = os.path.join(
+            "debug",
+            "products",
+            data_dasar.get("tiktok_id_product", "")
+        )
+
+        os.makedirs(
+            debug_folder,
+            exist_ok=True
+        )
+
+        ss_file = os.path.join(
+            debug_folder,
+            datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            + os.path.splitext(filepath)[1]
+        )
+
+        shutil.copy2(
+            filepath,
+            ss_file
+        )
+
+        ############################################################
+        # OCR
+        ############################################################
+
+        #processor = OCRProcessor()
+        processor = OCRProcessor(data_dasar.get("tiktok_id_product", "tanpa_id"))
+
+        raw_ocr_text = processor.run(filepath)
+        logger("info", "====================xxxxxxxxxxxxxxxxx=============================")
+        raw = parse_ocr(raw_ocr_text)
 
     if raw.get("persentase_komisi") and raw.get("komisi"):
 
@@ -166,7 +196,9 @@ def analyze_product(
             price_baru,
 
         "rating":
-            safe_float(data_dasar.get("rating", 0)),
+            safe_float(
+                raw.get("rating") or data_dasar.get("rating") or 0
+            ),
 
         "vote":
             safe_int(
@@ -219,6 +251,15 @@ def analyze_product(
         "debug",
         extracted_data
     )
+
+    # Jalur input manual: persentase_komisi wajib diteruskan ke
+    # opportunity engine (commission.py membaca data["persentase_komisi"]).
+    # Jalur OCR tidak menyertakan field ini agar behavior existing
+    # /analyze-by-phone tidak berubah.
+    if raw_data is not None:
+        extracted_data["persentase_komisi"] = safe_float(
+            raw_data.get("persentase_komisi", 0)
+        )
 
     ############################################################
     # Opportunity Engine

@@ -1,0 +1,290 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+
+<div class="card mb-4">
+
+    <div class="card-header">
+        <h3 class="card-title">
+            Manual TikTok Metrics Analysis
+        </h3>
+    </div>
+
+    <div class="card-body">
+
+        <p class="text-muted">
+            Masukkan metrik TikTok secara manual. Data produk
+            (judul, deskripsi, harga, vote, sold) tetap diambil
+            otomatis dari URL product melalui scraper existing.
+        </p>
+
+        {% if errors.global %}
+        <div class="alert alert-danger">
+            {{ errors.global }}
+        </div>
+        {% endif %}
+
+        <form
+            method="POST"
+            action="/analyze-manual/analyze"
+        >
+
+            <!-- ============================== -->
+            <!-- 1. NOMINAL KOMISI -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="komisi">
+                    Nominal Komisi
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.komisi %}is-invalid{% endif %}"
+                    id="komisi"
+                    name="komisi"
+                    min="0"
+                    step="1"
+                    placeholder="6200"
+                    value="{{ form.get('komisi', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 6200 (artinya Rp6.200). Tanpa "Rp".
+                </div>
+
+                {% if errors.komisi %}
+                <div class="invalid-feedback">
+                    {{ errors.komisi }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 2. PERSENTASE KOMISI -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="persentase_komisi">
+                    Persentase Komisi (%)
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.persentase_komisi %}is-invalid{% endif %}"
+                    id="persentase_komisi"
+                    name="persentase_komisi"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="10"
+                    value="{{ form.get('persentase_komisi', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 10 (artinya 10%). Tanpa "%".
+                </div>
+
+                {% if errors.persentase_komisi %}
+                <div class="invalid-feedback">
+                    {{ errors.persentase_komisi }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 3. PRODUK RATING -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="rating">
+                    Produk Rating (1.0 - 5.0)
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.rating %}is-invalid{% endif %}"
+                    id="rating"
+                    name="rating"
+                    min="1"
+                    max="5"
+                    step="0.1"
+                    placeholder="3.0"
+                    value="{{ form.get('rating', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 3.0. Bukan format "3.0/5.0".
+                </div>
+
+                {% if errors.rating %}
+                <div class="invalid-feedback">
+                    {{ errors.rating }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 4. PESANAN -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="pesanan">
+                    Pesanan
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.pesanan %}is-invalid{% endif %}"
+                    id="pesanan"
+                    name="pesanan"
+                    min="0"
+                    step="1"
+                    placeholder="13600"
+                    value="{{ form.get('pesanan', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 13600. Bukan format "13.6K".
+                </div>
+
+                {% if errors.pesanan %}
+                <div class="invalid-feedback">
+                    {{ errors.pesanan }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 5. CTR -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="ctr">
+                    CTR (%)
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.ctr %}is-invalid{% endif %}"
+                    id="ctr"
+                    name="ctr"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="6.7"
+                    value="{{ form.get('ctr', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 6.7 (artinya 6.7%). Tanpa "%".
+                </div>
+
+                {% if errors.ctr %}
+                <div class="invalid-feedback">
+                    {{ errors.ctr }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 6. JUMLAH CREATOR -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="jumlah_kreator">
+                    Jumlah Creator
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.jumlah_kreator %}is-invalid{% endif %}"
+                    id="jumlah_kreator"
+                    name="jumlah_kreator"
+                    min="0"
+                    step="1"
+                    placeholder="3000"
+                    value="{{ form.get('jumlah_kreator', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 3000. Bukan format "3K".
+                </div>
+
+                {% if errors.jumlah_kreator %}
+                <div class="invalid-feedback">
+                    {{ errors.jumlah_kreator }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 7. PEMBELI KERANJANG -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="pembeli_keranjang">
+                    Pembeli yang Menambahkan ke Keranjang
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.pembeli_keranjang %}is-invalid{% endif %}"
+                    id="pembeli_keranjang"
+                    name="pembeli_keranjang"
+                    min="0"
+                    step="1"
+                    placeholder="30100"
+                    value="{{ form.get('pembeli_keranjang', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 30100. Bukan format "30.1K".
+                </div>
+
+                {% if errors.pembeli_keranjang %}
+                <div class="invalid-feedback">
+                    {{ errors.pembeli_keranjang }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 8. URL PRODUCT -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="product_link">
+                    URL Product
+                </label>
+
+                <input
+                    type="url"
+                    class="form-control {% if errors.product_link %}is-invalid{% endif %}"
+                    id="product_link"
+                    name="product_link"
+                    placeholder="https://vt.tokopedia.com/t/..."
+                    value="{{ form.get('product_link', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Wajib diisi. Data produk akan di-scrape dari URL ini.
+                </div>
+
+                {% if errors.product_link %}
+                <div class="invalid-feedback">
+                    {{ errors.product_link }}
+                </div>
+                {% endif %}
+            </div>
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                <i class="ti ti-analyze me-2"></i>
+                Analyze Product
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<!-- Reuse hasil analysis existing (opportunity + product info + LLM) -->
+{% include "product_rating/result.html" %}
+
+{% endblock %}

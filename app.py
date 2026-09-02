@@ -25,6 +25,7 @@ from routers.setting.index import setting_bp
 from routers.product_list.index import product_list_bp
 from routers.prepare_upload.index import prepare_upload_bp
 from routers.analyze_by_phone.index import analyze_by_phone_bp
+from routers.analyze_manual.index import analyze_manual_bp
 from routers.tiktok_uploader.index import tiktok_uploader_bp
 from routers.product.index import product_ID_bp
 from routers.creator.index import creator_bp
@@ -44,6 +45,7 @@ app.register_blueprint(setting_bp)
 app.register_blueprint(product_list_bp)
 app.register_blueprint(prepare_upload_bp)
 app.register_blueprint(analyze_by_phone_bp)
+app.register_blueprint(analyze_manual_bp)
 app.register_blueprint(tiktok_uploader_bp)
 app.register_blueprint(product_ID_bp)
 app.register_blueprint(creator_bp)
