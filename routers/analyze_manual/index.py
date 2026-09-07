@@ -135,6 +135,12 @@ def analyze():
     if err:
         errors["pesanan"] = err
 
+    stok, err = _validate_int(
+        form.get("stok"), "Stok Tersedia", min_value=0
+    )
+    if err:
+        errors["stok"] = err
+
     ctr, err = _validate_decimal(
         form.get("ctr"),
         "CTR",
@@ -173,6 +179,7 @@ def analyze():
     # ==================================================
     # Struktur data manual -> sama persis dengan raw OCR
     # yang dikonsumsi analyze_product() / opportunity engine:
+    #   "stok"      -> extracted_data["stok_tersedia"]
     #   "kreator"   -> extracted_data["jumlah_kreator"]
     #   "keranjang" -> extracted_data["pembeli_keranjang"]
     # ==================================================
@@ -182,6 +189,7 @@ def analyze():
         "persentase_komisi": persentase_komisi,
         "rating": rating,
         "pesanan": pesanan,
+        "stok": stok,
         "ctr": ctr,
         "kreator": jumlah_kreator,
         "keranjang": pembeli_keranjang,

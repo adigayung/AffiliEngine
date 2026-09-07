@@ -152,7 +152,37 @@
             </div>
 
             <!-- ============================== -->
-            <!-- 5. CTR -->
+            <!-- 5. STOK TERSEDIA -->
+            <!-- ============================== -->
+            <div class="mb-3">
+                <label class="form-label" for="stok">
+                    Stok Tersedia
+                </label>
+
+                <input
+                    type="number"
+                    class="form-control {% if errors.stok %}is-invalid{% endif %}"
+                    id="stok"
+                    name="stok"
+                    min="0"
+                    step="1"
+                    placeholder="89200"
+                    value="{{ form.get('stok', '') if form else '' }}"
+                >
+
+                <div class="form-hint">
+                    Contoh: 89200. Bukan format "89.2K".
+                </div>
+
+                {% if errors.stok %}
+                <div class="invalid-feedback">
+                    {{ errors.stok }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ============================== -->
+            <!-- 6. CTR -->
             <!-- ============================== -->
             <div class="mb-3">
                 <label class="form-label" for="ctr">
@@ -183,7 +213,7 @@
             </div>
 
             <!-- ============================== -->
-            <!-- 6. JUMLAH CREATOR -->
+            <!-- 7. JUMLAH CREATOR -->
             <!-- ============================== -->
             <div class="mb-3">
                 <label class="form-label" for="jumlah_kreator">
@@ -213,7 +243,7 @@
             </div>
 
             <!-- ============================== -->
-            <!-- 7. PEMBELI KERANJANG -->
+            <!-- 8. PEMBELI KERANJANG -->
             <!-- ============================== -->
             <div class="mb-3">
                 <label class="form-label" for="pembeli_keranjang">
@@ -243,7 +273,7 @@
             </div>
 
             <!-- ============================== -->
-            <!-- 8. URL PRODUCT -->
+            <!-- 9. URL PRODUCT -->
             <!-- ============================== -->
             <div class="mb-3">
                 <label class="form-label" for="product_link">
