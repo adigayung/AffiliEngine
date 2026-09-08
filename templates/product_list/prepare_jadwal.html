@@ -102,6 +102,110 @@
 
 </div>
 
+        <!-- METODE PENYEBARAN VIDEO -->
+        <div class="mb-4">
+
+            <label class="form-label">
+
+                Metode Penyebaran Video
+
+            </label>
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+
+                    <div class="card mb-0">
+
+                        <div class="card-body py-3">
+
+                            <div class="form-check">
+
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="distribution_method"
+                                    id="dist_method_existing"
+                                    value="existing"
+                                    checked>
+
+                                <label
+                                    class="form-check-label"
+                                    for="dist_method_existing">
+
+                                    <i class="ti ti-list-ordered me-1"></i>
+
+                                    Metode Lama
+
+                                    <span class="text-secondary d-block small mt-1">
+
+                                        Smart Smooth Weighted Round Robin
+                                        (perilaku saat ini, urutan video tidak diubah)
+
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="card mb-0">
+
+                        <div class="card-body py-3">
+
+                            <div class="form-check">
+
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="distribution_method"
+                                    id="dist_method_balanced"
+                                    value="balanced">
+
+                                <label
+                                    class="form-check-label"
+                                    for="dist_method_balanced">
+
+                                    <i class="ti ti-scale me-1"></i>
+
+                                    Balanced Distribution
+
+                                    <span class="text-secondary d-block small mt-1">
+
+                                        Video setiap produk disebar merata di tiap
+                                        hari dan slot upload harian
+
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="form-hint mt-2">
+
+                Metode Lama tetap dipilih secara default sehingga jadwal
+                yang sudah pernah dibuat tidak berubah. Pilih Balanced
+                Distribution agar tiap produk muncul proporsional setiap hari.
+
+            </div>
+
+        </div>
+
         <!-- NAV TAB -->
         <ul class="nav nav-tabs" data-bs-toggle="tabs">
 
@@ -284,6 +388,30 @@ Object.values(selectedProducts).forEach(function(qty){
 });
 
 document.getElementById("totalVideo").textContent = total;
+
+// ==============================
+// METODE PENYEBARAN VIDEO
+// ==============================
+
+function getDistributionMethod() {
+
+    var radios = document.querySelectorAll(
+        'input[name="distribution_method"]'
+    );
+
+    for (var i = 0; i < radios.length; i++) {
+
+        if (radios[i].checked) {
+
+            return radios[i].value;
+
+        }
+
+    }
+
+    return "existing";
+
+}
 
 // ==============================
 // CREATOR CHECK + PENDING SUBMIT

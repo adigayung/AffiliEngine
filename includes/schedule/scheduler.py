@@ -26,6 +26,10 @@ from includes.schedule.algorithms import (
     create_upload_schedule
 )
 
+from includes.schedule.balanced import (
+    generate_balanced_schedule
+)
+
 from includes.schedule.folder import (
     create_batch_folder,
     create_job_folder,
@@ -82,6 +86,15 @@ class UploadScheduler:
 
         self.start_time = request.form.get(
             "start_time"
+        )
+
+        self.schedule_mode = request.form.get(
+            "schedule_mode"
+        )
+
+        self.distribution_method = request.form.get(
+            "distribution_method",
+            "existing"
         )
 
         self.interval_hour = int(
@@ -567,9 +580,36 @@ class UploadScheduler:
             exist_ok=True
         )
 
-        self.schedule = create_upload_schedule(
-            self.products
-        )
+        # ==============================
+        # METODE PENYEBARAN VIDEO
+        # ==============================
+        # "existing"  -> algoritma lama (Smart Smooth Weighted Round Robin)
+        # "balanced"  -> Balanced Distribution (includes/schedule/balanced.py)
+        # Metode lama tetap menjadi default dan tidak diubah.
+        if self.distribution_method == "balanced":
+
+            day_capacities = self._balanced_day_capacities()
+
+            if day_capacities is not None:
+
+                self.schedule = generate_balanced_schedule(
+                    self.products,
+                    day_capacities
+                )
+
+            else:
+
+                # Mode yang tidak dapat dipetakan per-hari dengan pasti
+                # (mis. Pattern multi-stage) tetap memakai algoritma lama.
+                self.schedule = create_upload_schedule(
+                    self.products
+                )
+
+        else:
+
+            self.schedule = create_upload_schedule(
+                self.products
+            )
 
         # hitung waktu sesuai mode scheduler
         self.prepare_time()
@@ -1207,6 +1247,225 @@ class UploadScheduler:
             "folder": str(folder_path),
             "datetime": self.current_time
         })
+
+    # ==================================================================
+    # BALANCED DISTRIBUTION - KAPASITAS UPLOAD PER HARI
+    # ==================================================================
+    def _balanced_day_capacities(self):
+        """
+        Menghitung kapasitas upload per hari sesuai konfigurasi mode
+        scheduler. Kapasitas ini dipakai sebagai constraint sekaligus
+        pembagian slot per hari oleh Balanced Distribution.
+
+        Return list[int] (kapasitas tiap hari) jika dapat dihitung
+        dengan pasti, atau None jika mode tidak didukung / data kurang.
+        """
+        total = sum(self.products.values())
+
+        if total <= 0:
+            return None
+
+        mode = self.schedule_mode
+
+        try:
+
+            if mode == "fixed":
+
+                return self._balanced_capacities_fixed(total)
+
+            elif mode == "interval":
+
+                return self._balanced_capacities_interval(total)
+
+            elif mode == "weekly":
+
+                return self._balanced_capacities_weekly(total)
+
+            elif mode == "import_schedule":
+
+                return self._balanced_capacities_import(total)
+
+        except Exception:
+
+            return None
+
+        # Mode "pattern" (multi-stage) belum dipetakan per-hari,
+        # method ini mengembalikan None sehingga algoritma lama dipakai.
+        return None
+
+    def _balanced_capacities_fixed(self, total):
+        """
+        Fixed Time: jumlah slot per hari = banyaknya upload_time.
+        Hari terakhir boleh lebih pendek jika total tidak habis dibagi.
+        """
+        upload_times = json.loads(
+            self.request.form.get(
+                "upload_times",
+                "[]"
+            )
+        )
+
+        if not upload_times:
+            return None
+
+        per_day = len(upload_times)
+
+        caps = [per_day] * (total // per_day)
+
+        remainder = total % per_day
+
+        if remainder > 0:
+            caps.append(remainder)
+
+        return caps
+
+    def _balanced_capacities_interval(self, total):
+        """
+        Interval: menghitung berapa video jatuh pada tiap tanggal
+        berdasarkan interval_hour/interval_minute dari start datetime.
+        """
+        start_date = self.request.form.get("start_date")
+        start_time = self.request.form.get("start_time")
+
+        if not start_date or not start_time:
+            return None
+
+        interval_hour = int(
+            self.request.form.get("interval_hour", 20)
+        )
+
+        if interval_hour <= 0:
+            return None
+
+        # current_time di process_jobs hanya maju per interval_hour
+        # (tanpa menambah interval_minute), jadi di sini sama.
+        current = datetime.strptime(
+            f"{start_date} {start_time}",
+            "%Y-%m-%d %H:%M"
+        )
+
+        caps = []
+
+        count = 0
+
+        current_day = None
+
+        for _ in range(total):
+
+            day = current.date()
+
+            if current_day is None or day == current_day:
+
+                current_day = day
+
+                count += 1
+
+            else:
+
+                caps.append(count)
+
+                current_day = day
+
+                count = 1
+
+            current += timedelta(hours=interval_hour)
+
+        if count > 0:
+            caps.append(count)
+
+        return caps
+
+    def _balanced_capacities_weekly(self, total):
+        """
+        Weekly: menghitung banyaknya slot upload pada tiap hari aktif
+        (sama seperti process_weekly_jobs), dimulai dari start_date.
+        """
+        start_date = self.request.form.get("start_date")
+
+        if not start_date:
+            return None
+
+        weekly_schedule = self.weekly_schedule or {}
+
+        current_date = datetime.strptime(
+            start_date,
+            "%Y-%m-%d"
+        )
+
+        caps = []
+
+        product_index = 0
+
+        while product_index < total:
+
+            day_name = current_date.strftime("%A")
+
+            day_times = weekly_schedule.get(day_name, [])
+
+            if not day_times:
+
+                current_date += timedelta(days=1)
+
+                continue
+
+            day_times_sorted = sorted(day_times)
+
+            count = 0
+
+            for _ in day_times_sorted:
+
+                if product_index >= total:
+                    break
+
+                product_index += 1
+
+                count += 1
+
+            if count > 0:
+                caps.append(count)
+
+            current_date += timedelta(days=1)
+
+        return caps
+
+    def _balanced_capacities_import(self, total):
+        """
+        Import Schedule: menghitung kapasitas per hari dari pattern
+        yang diimpor (initial_pattern + repeat_pattern).
+        """
+        import_data = json.loads(self.import_pattern)
+
+        caps = []
+
+        count = 0
+
+        previous_offset = None
+
+        for product_idx in range(total):
+
+            offset = calculate_day_offset_from_pattern(
+                import_data,
+                product_idx
+            )
+
+            if previous_offset is None or offset == previous_offset:
+
+                previous_offset = offset
+
+                count += 1
+
+            else:
+
+                caps.append(count)
+
+                previous_offset = offset
+
+                count = 1
+
+        if count > 0:
+            caps.append(count)
+
+        return caps
 
     def finish(self):
 

@@ -116,6 +116,7 @@ function buatJadwal(){
         const formData = new FormData();
 
         formData.append("schedule_mode", "interval");
+        formData.append("distribution_method", getDistributionMethod());
         formData.append("products", JSON.stringify(selectedProducts));
         formData.append("upload_directory", document.getElementById("upload_directory").value.trim());
         formData.append("start_date", startDate);
