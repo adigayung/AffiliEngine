@@ -79,7 +79,14 @@ class PipelineRunner:
         if len(self.logs) > 500:
             self.logs = self.logs[-500:]
 
-    def _run_pipeline(self, root_path: str, preserve_audio: bool, add_music: bool):
+    def _run_pipeline(
+        self,
+        root_path: str,
+        preserve_audio: bool,
+        add_music: bool,
+        edit_audio_db: bool,
+        audio_db: float,
+    ):
         """Run the pipeline in a background thread."""
         try:
             result = create_video(
@@ -87,6 +94,8 @@ class PipelineRunner:
                 log_callback=self.add_log,
                 preserve_audio=preserve_audio,
                 add_music=add_music,
+                edit_audio_db=edit_audio_db,
+                audio_db=audio_db,
             )
             self.add_log(f"Pipeline selesai: {result['succeeded']} OK, {result['failed']} FAIL")
         except Exception as e:
@@ -94,7 +103,14 @@ class PipelineRunner:
         finally:
             self.running = False
 
-    def start(self, root_path: str, preserve_audio: bool = False, add_music: bool = True) -> bool:
+    def start(
+        self,
+        root_path: str,
+        preserve_audio: bool = False,
+        add_music: bool = True,
+        edit_audio_db: bool = False,
+        audio_db: float = 0.0,
+    ) -> bool:
         """Start the pipeline in a background thread."""
         if self.running:
             return False
@@ -103,7 +119,7 @@ class PipelineRunner:
         self.running = True
         self.thread = threading.Thread(
             target=self._run_pipeline,
-            args=(root_path, preserve_audio, add_music),
+            args=(root_path, preserve_audio, add_music, edit_audio_db, audio_db),
             daemon=True,
         )
         self.thread.start()
@@ -140,6 +156,25 @@ def start():
     preserve_audio = _to_bool(request.form.get("preserve_audio"), default=False)
     add_music = _to_bool(request.form.get("add_music"), default=True)
 
+    # Edit Audio dB (default: off, audio_db=0)
+    edit_audio_db = _to_bool(request.form.get("edit_audio_db"), default=False)
+    audio_db = 0.0
+    if edit_audio_db:
+        raw_db = request.form.get("audio_db", "").strip()
+        if raw_db:
+            try:
+                audio_db = float(raw_db)
+            except (TypeError, ValueError):
+                return jsonify({
+                    "success": False,
+                    "message": "Audio dB harus berupa angka (contoh: +5, -3, 0).",
+                }), 400
+            if audio_db != audio_db or audio_db in (float("inf"), float("-inf")):
+                return jsonify({
+                    "success": False,
+                    "message": "Audio dB harus berupa angka yang valid.",
+                }), 400
+
     if not root_path:
         return jsonify({"success": False, "message": "Root path tidak boleh kosong."}), 400
 
@@ -151,6 +186,8 @@ def start():
         root_path,
         preserve_audio=preserve_audio,
         add_music=add_music,
+        edit_audio_db=edit_audio_db,
+        audio_db=audio_db,
     )
 
     if not ok:

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Callable, Optional, List
 import json
 import shutil
+import subprocess
 
 from includes.video_pipeline.decode_video import decode_single_video
 from includes.video_pipeline.add_sound import add_sound
@@ -168,6 +169,108 @@ def _get_music_for_index(music_list: list, index: int) -> Optional[str]:
 
 
 # ================================================================
+# Edit Audio dB — relative volume gain helper
+# ================================================================
+
+def _has_audio_stream(file_path: Path) -> bool:
+    """Cek apakah file media memiliki stream audio.
+
+    Args:
+        file_path: Path ke file media.
+
+    Returns:
+        True jika ada stream audio, False jika tidak atau gagal baca.
+    """
+    cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_streams",
+        str(file_path),
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            return False
+        data = json.loads(result.stdout)
+        return any(s.get("codec_type") == "audio" for s in data.get("streams", []))
+    except Exception:
+        return False
+
+
+def _adjust_audio_db(
+    input_video: Path,
+    audio_db: float,
+    log_callback: Optional[Callable] = None,
+) -> Path:
+    """Terapkan relative volume gain (dB) pada audio sebuah video.
+
+    Hanya stream audio yang diganti (re-encode AAC), stream video di-copy
+    (tidak re-encode). Gain diterapkan pada audio hasil decode/merge sehingga
+    audio a.mp4 / b.mp4 tidak hilang pada tahap reverse/merge.
+
+    Args:
+        input_video: Path video input.
+        audio_db: Gain relatif dalam dB (5, +5, -3, 0).
+        log_callback: Optional log function.
+
+    Returns:
+        Path hasil gain jika berhasil, atau input_video jika:
+          - audio_db == 0 (tanpa perubahan)
+          - video tidak memiliki audio (skip, tidak gagal)
+          - ffmpeg gagal / tidak ditemukan (lanjut tanpa perubahan)
+    """
+    def _log(msg: str):
+        print(msg)
+        if log_callback:
+            log_callback(msg)
+
+    if audio_db == 0:
+        return input_video
+
+    if not _has_audio_stream(input_video):
+        _log("  [SKIP] Video tanpa audio, lewati edit audio dB")
+        return input_video
+
+    output_path = input_video.with_stem(input_video.stem + "_db")
+    db_str = f"{audio_db:g}"
+
+    cmd = [
+        "ffmpeg",
+        "-i", str(input_video),
+        "-af", f"volume={db_str}dB",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-y", str(output_path),
+    ]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=None)
+    except FileNotFoundError:
+        _log("  [WARN] ffmpeg tidak ditemukan, lewati edit audio dB")
+        return input_video
+    except Exception as e:
+        _log(f"  [WARN] Gagal edit audio dB: {e}")
+        return input_video
+
+    if result.returncode != 0:
+        _log("  [WARN] Edit audio dB gagal, lanjut tanpa perubahan")
+        try:
+            if output_path.exists():
+                output_path.unlink()
+        except Exception:
+            pass
+        return input_video
+
+    if output_path.exists() and output_path.stat().st_size > 0:
+        _log(f"  [OK] Audio dB diterapkan: {db_str} dB")
+        return output_path
+
+    _log("  [WARN] Edit audio dB: output tidak ditemukan")
+    return input_video
+
+
+# ================================================================
 # Cleanup — only delete pipeline-created temp files
 # ================================================================
 
@@ -203,6 +306,8 @@ def _process_single_folder(
     log_callback: Optional[Callable] = None,
     preserve_audio: bool = False,
     add_music: bool = True,
+    edit_audio_db: bool = False,
+    audio_db: float = 0.0,
 ) -> bool:
     """Process a single folder through the video pipeline.
 
@@ -212,6 +317,8 @@ def _process_single_folder(
         log_callback: Optional function to call for realtime log messages.
         preserve_audio: Jika True, audio asli video dipertahankan.
         add_music: Jika True, music dari sound.json ditambahkan.
+        edit_audio_db: Jika True, relative audio gain (dB) diterapkan.
+        audio_db: Besar gain relatif dalam dB (0 = tanpa perubahan).
 
     Returns:
         True if successful, False if any step failed.
@@ -284,6 +391,16 @@ def _process_single_folder(
 
     # decode_output (output.mp4) adalah hasil decode, ini temp
     temp_files.append(str(decode_path.resolve()))
+
+    # -- Step 1b: Edit Audio dB (opsional, hanya aktif jika checkbox ON) --
+    if edit_audio_db and audio_db != 0:
+        _log(f"  Edit Audio dB: {audio_db:g} dB")
+        adjusted_path = _adjust_audio_db(decode_path, audio_db, log_callback)
+        if adjusted_path != decode_path:
+            temp_files.append(str(adjusted_path.resolve()))
+            decode_path = adjusted_path
+    else:
+        _log("  Edit Audio dB: skip")
 
     # -- Step 2: Add Sound (hanya jika add_music=True) --
     if add_music:
@@ -363,6 +480,8 @@ def create_video(
     log_callback: Optional[Callable] = None,
     preserve_audio: bool = False,
     add_music: bool = True,
+    edit_audio_db: bool = False,
+    audio_db: float = 0.0,
 ) -> dict:
     """Main entry point: process all videos in a root folder.
 
@@ -374,6 +493,8 @@ def create_video(
         log_callback: Optional callable(text: str) for realtime log updates.
         preserve_audio: Jika True, audio asli video dipertahankan (default False).
         add_music: Jika True, music dari sound.json ditambahkan (default True).
+        edit_audio_db: Jika True, relative audio gain (dB) diterapkan pada audio video.
+        audio_db: Besar gain relatif dalam dB (5, -3, 0). Diabaikan saat edit_audio_db=False.
 
     Returns:
         Dict with:
@@ -393,6 +514,8 @@ def create_video(
     _log(f"Root: {root_path}")
     _log(f"Preserve Audio: {preserve_audio}")
     _log(f"Add Music: {add_music}")
+    _log(f"Edit Audio DB: {edit_audio_db}")
+    _log(f"Audio DB: {audio_db:g} dB")
 
     # Scan
     folders = _scan_folders(str(root_path), add_music=add_music)
@@ -422,6 +545,8 @@ def create_video(
                 log_callback,
                 preserve_audio=preserve_audio,
                 add_music=add_music,
+                edit_audio_db=edit_audio_db,
+                audio_db=audio_db,
             )
         except Exception as e:
             _log(f"  [ERROR] Unexpected error: {e}")
