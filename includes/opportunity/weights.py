@@ -29,7 +29,7 @@ WEIGHTS = {
     # PRODUCT QUALITY
     # ======================================================
     #
-    # Review positif.
+    # Rating produk (0.0 - 5.0).
     #
     "product_quality": 0.10,
 

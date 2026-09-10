@@ -143,13 +143,22 @@
 
                     {% for key, score in scores.items() %}
 
+                        {% set pq = score.value if score.value is defined else none %}
+                        {% set pq_rating = pq.rating if (pq and pq.rating is defined) else 0 %}
+                        {% set is_product_quality = key == "product_quality" %}
+                        {% set bar_width = (pq.rating_percent if (pq and pq.rating_percent is defined) else (pq_rating / 5 * 100)) if is_product_quality else score.score %}
+
                         <div class="mb-3">
 
                             <div class="d-flex justify-content-between">
 
                                 <strong>{{ score.name }}</strong>
 
-                                <span>{{ score.score }}</span>
+                                {% if is_product_quality %}
+                                    <span>{{ "%.1f/5.0"|format(pq_rating) }}</span>
+                                {% else %}
+                                    <span>{{ score.score }}</span>
+                                {% endif %}
 
                             </div>
 
@@ -157,7 +166,7 @@
 
                                 <div
                                     class="progress-bar"
-                                    style="width: {{ score.score }}%;">
+                                    style="width: {{ bar_width }}%;">
                                 </div>
 
                             </div>

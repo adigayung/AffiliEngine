@@ -75,9 +75,11 @@
             <div class="col-md-4 col-6 mb-3">
                 <div class="card bg-yellow-lt">
                     <div class="card-body text-center">
-                        <div class="text-secondary">Quality</div>
+                        <div class="text-secondary">Product Quality</div>
                         <div class="h1">
-                            {{ analysis.scores.product_quality.score }}
+                            {% set pq = analysis.scores.product_quality %}
+                            {% set pq_rating = pq.value.rating if (pq.value is defined and pq.value.rating is defined) else 0 %}
+                            {{ "%.1f/5.0"|format(pq_rating) }}
                         </div>
                     </div>
                 </div>

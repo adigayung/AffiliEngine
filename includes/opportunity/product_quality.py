@@ -3,8 +3,8 @@ Opportunity Engine V5
 
 Product Quality
 
-Mengukur kualitas produk berdasarkan
-persentase ulasan positif.
+Mengukur kualitas produk berdasarkan rating produk
+(skala 0.0 - 5.0).
 """
 
 from .helpers import (
@@ -14,53 +14,69 @@ from .helpers import (
 
 
 # ==========================================================
+# CONFIG
+# ==========================================================
+
+MAX_RATING = 5.0
+
+
+# ==========================================================
 # MAIN
 # ==========================================================
 
 def calculate_product_quality_score(data):
 
-    ulasan = max(
-        float(data.get("ulasan_positif", 0)),
+    rating = max(
+        float(data.get("rating", 0) or 0),
         0
     )
 
-    review_score = normalize_linear(
-        ulasan,
-        100
+    # Rating (0.0 - 5.0) dinormalisasi ke skala 0 - 100 HANYA untuk
+    # keperluan internal (bobot opportunity score & progress bar).
+    # Angka yang ditampilkan ke user tetap rating asli 0.0 - 5.0.
+    rating_score = normalize_linear(
+        rating,
+        MAX_RATING
     )
 
-    final_score = review_score
+    final_score = rating_score
 
     # ======================================================
 
-    if final_score >= 95:
+    if rating >= 4.5:
 
         description = (
-            "Mayoritas pembeli memberikan ulasan yang sangat positif."
+            "Rating produk sangat tinggi, mayoritas pembeli sangat puas."
         )
 
-    elif final_score >= 90:
+    elif rating >= 4.0:
 
         description = (
-            "Ulasan produk sangat baik."
+            "Rating produk tinggi, pembeli umumnya puas."
         )
 
-    elif final_score >= 80:
+    elif rating >= 3.0:
 
         description = (
-            "Ulasan produk cukup baik."
+            "Rating produk cukup baik."
         )
 
-    elif final_score >= 70:
+    elif rating >= 2.0:
 
         description = (
-            "Kualitas produk tergolong sedang."
+            "Rating produk tergolong sedang."
+        )
+
+    elif rating > 0:
+
+        description = (
+            "Rating produk rendah, banyak ulasan negatif."
         )
 
     else:
 
         description = (
-            "Banyak ulasan negatif atau data ulasan masih rendah."
+            "Produk belum memiliki rating."
         )
 
     # ======================================================
@@ -73,10 +89,12 @@ def calculate_product_quality_score(data):
 
         value={
 
-            "ulasan_positif": ulasan,
+            "rating": rating,
 
-            "review_score": round(
-                review_score,
+            "rating_max": MAX_RATING,
+
+            "rating_percent": round(
+                rating_score,
                 2
             )
 
