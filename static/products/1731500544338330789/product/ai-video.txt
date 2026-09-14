@@ -1,0 +1,124 @@
+-=-=-=-=-=-=-=-=-=-=-=-=[ Scene 1 ]-=-=-=-=-=-=-=-=-=-=-=-=
+Buat video realistis vertikal 9:16, durasi tepat 8 detik.
+
+REFERENSI WAJIB:
+- image1 = karakter/model utama. Pertahankan identitas, wajah, bentuk rambut, warna rambut, proporsi tubuh, dan karakteristik wajah dari image1 secara konsisten.
+produk sofa angin. Pertahankan bentuk, ukuran, warna, desain, material, tekstur, jahitan, dan seluruh detail produk. Jangan melakukan redesign atau mengganti bentuk produk.
+
+MODEL:
+Gunakan karakter persis dari image1.
+Outfit harus terlihat konsisten sepanjang video.
+
+STRUKTUR VIDEO — TEPAT 3 SHOT:
+
+SHOT 1 — 0 sampai 2,4 detik:
+Video LANGSUNG dimulai dengan model sudah berada dalam posisi di atas sofa angin.
+Model duduk santai, kedua kaki berada di sisi sofa, tubuh sedikit bersandar.
+Model melihat ke arah kamera dengan ekspresi sedikit manja dan penasaran, kemudian tersenyum kecil.
+Kamera medium shot dari arah depan sedikit menyamping.
+Gerakan kamera sangat halus.
+JANGAN ada adegan model berjalan menuju sofa atau duduk dari awal. Frame pertama HARUS langsung menunjukkan model sedang ngangkang di sofa.
+
+VO pada bagian ini:
+“Dipake posisi serong, ternyata enak juga.”
+
+SHOT 2 — 2,4 sampai 4,8 detik:
+Model perlahan mengubah posisi duduk menjadi lebih santai sambil tetap berada di atas sofa.
+Model menekan atau menggoyangkan tubuh sedikit untuk menunjukkan sofa terasa empuk, kemudian bersandar dengan nyaman.
+Ekspresi model berubah menjadi puas dan nyaman.
+Kamera melakukan slow push-in untuk memperlihatkan model sekaligus permukaan dan bentuk sofa.
+
+VO pada bagian ini:
+“Buat gaya miring-miring juga nyaman banget!”
+
+SHOT 3 — 4,8 sampai 8 detik:
+Model kembali ke pose awal gambar referensi. 
+Model tersenyum menikmati kenyamanan sofa lalu melihat kamera.
+Kamera sedikit pull-back sehingga keseluruhan sofa dan model terlihat jelas.
+
+VO pada bagian ini:
+“Buat kalian yang suka berbagai gaya, wajib punya minimal satu di rumah.”
+
+AUDIO:
+Gunakan voice over perempuan dewasa dengan suara lembut, manja, natural, seperti sedang merekomendasikan produk kepada teman.
+Tempo bicara santai tetapi cukup padat agar seluruh VO selesai dalam 10 detik dan tidak terpotong.
+Gerakan bibir harus sinkron dengan VO.
+
+GAYA:
+Realistic iPhone-style smartphone video, natural handheld movement, realistic human movement, casual everyday footage, no cinematic look.
+
+NEGATIVE:
+Jangan mengubah karakter image1.
+Jangan menambahkan produk lain.
+Jangan mengganti warna produk.
+Jangan mengubah desain sofa.
+Jangan mengubah outfit di tengah scene.
+Jangan ada cahaya matahari.
+Jangan ada hard shadow.
+Jangan ada anatomi tubuh abnormal, tangan tambahan, jari tambahan, kaki tambahan, wajah berubah, atau karakter berubah.
+
+-=-=-=-=-=-=-=-=-=-=-=-=[ Scene 2 ]-=-=-=-=-=-=-=-=-=-=-=-=
+
+Buat video realistis vertikal 9:16, durasi tepat 8 detik.
+
+REFERENSI WAJIB:
+- image1 = karakter/model utama yang sama persis dari scene sebelumnya.
+
+KONSISTENSI:
+Karakter image1 wajib identik dengan gambar referensi.
+Wajah, rambut, proporsi tubuh, usia visual, dan karakteristik model tidak boleh berubah.
+
+Jangan mengubah bentuk, ukuran, warna, material, tekstur, desain, jahitan, atau detail sofa.
+
+STRUKTUR VIDEO — TEPAT 3 SHOT:
+
+SHOT 1 — 0 sampai 2,8 detik:
+Mulai dari posisi akhir scene sebelumnya.
+Model sedang rebahan santai di sofa angin.
+Model menatap kamera seolah sedang menjelaskan ke penonton.
+Kamera medium shot.
+
+VO pada bagian ini:
+“harganya? lima juta? Salah. satu juta? Masih salah.”
+
+SHOT 2 — 2,8 sampai 5,5 detik:
+Model seperti pose image1.
+Gerakan harus realistis. 
+Produk tetap menjadi fokus utama.
+VO pada bagian ini:
+“Coba bapak ibu cek keranjang bawah kalian dapat harga berapa.”
+
+SHOT 3 — 5,5 sampai 8,0 detik:
+Model kembali rebahan santai di sofa.
+Model tersenyum ke kamera dan memberikan gesture mengajak membeli, misalnya menunjuk ke arah bagian bawah layar.
+
+VO pada bagian ini:
+“bisa COD dan gratis ongkir. Yuk checkout sekarang!!!.”
+
+AUDIO:
+Voice over perempuan dewasa, lembut, manja, natural, conversational.
+Tempo dibuat pas untuk durasi 10 detik.
+VO harus mengikuti gerakan model secara natural.
+Tidak boleh ada VO yang terpotong di akhir video.
+Lip sync harus sesuai.
+
+GAYA:
+Realistic iPhone-style smartphone video, natural handheld movement, realistic human movement, casual everyday footage, no cinematic look.
+
+NEGATIVE:
+Jangan mengubah wajah atau identitas image1.
+Jangan mengganti model.
+Jangan mengubah bentuk atau desain sofa.
+Jangan membuat sofa berubah ukuran.
+Jangan menambahkan produk lain.
+Jangan mengubah outfit.
+Jangan ada pergantian outfit.
+Jangan ada cahaya matahari langsung.
+Jangan ada hard sunlight.
+Jangan ada anatomi abnormal.
+Jangan ada tangan tambahan, jari tambahan, kaki tambahan.
+Jangan ada gerakan patah-patah.
+Jangan ada teleportasi objek.
+Jangan ada perubahan background.
+
+

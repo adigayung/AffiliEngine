@@ -135,7 +135,7 @@ jobs_json = [
 {
     "id": 6,
     "cmd": "click",
-    "delay": 1000,
+    "delay": 2000,
     "status": "pending",
     "keterangan": "Pilih video yang akan di upload",
     "data": {
@@ -149,7 +149,7 @@ jobs_json = [
 {
     "id": 7,
     "cmd": "click",
-    "delay": 3000,
+    "delay": 4000,
     "status": "pending",
     "keterangan": "sudah select video tekan 'Berikutnya'",
     "data": {
@@ -163,7 +163,7 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 2500,
+    "delay": 4000,
     "status": "pending",
     "keterangan": "tekan 'Berikutnya' Lagi",
     "data": {
@@ -192,7 +192,7 @@ jobs_json = [
 {
     "id": 10,
     "cmd": "input_text",
-    "delay": 1000,
+    "delay": 2000,
     "status": "pending",
     "keterangan": "mengisi deskripsi tiktok",
     "data": {
