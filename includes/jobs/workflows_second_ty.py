@@ -107,7 +107,7 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 3000,
+    "delay": 2000,
     "status": "pending",
     "keterangan": "back dulu, anti bug",
     "data": {
@@ -121,7 +121,7 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 3000,
+    "delay": 2000,
     "status": "pending",
     "keterangan": "back dulu, anti bug",
     "data": {
@@ -135,7 +135,7 @@ jobs_json = [
 {
     "id": 6,
     "cmd": "click",
-    "delay": 1000,
+    "delay": 3000,
     "status": "pending",
     "keterangan": "Pilih video yang akan di upload",
     "data": {
@@ -163,7 +163,7 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 2500,
+    "delay": 3000,
     "status": "pending",
     "keterangan": "tekan 'Berikutnya' Lagi",
     "data": {
@@ -183,8 +183,8 @@ jobs_json = [
     "data": {
         "target": {
             "type": "point",
-            "x": 217,
-            "y": 283
+            "x": 216,
+            "y": 549
         }
     }
 },
