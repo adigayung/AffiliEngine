@@ -1,0 +1,52 @@
+{
+  "task_id": "123c8f16e5954c0a9bef80e52eee9aec",
+  "created_at": "2026-10-04T05:50:50.368175+00:00",
+  "updated_at": "2026-10-04T05:50:50.368175+00:00",
+  "responses": [
+    {
+      "round": 1,
+      "attempt": 1,
+      "timestamp": "2026-10-04T05:50:50.368175+00:00",
+      "provider": "9router",
+      "model": "auto",
+      "status": "success",
+      "finish_reason": "stop",
+      "truncated": false,
+      "incomplete_tool_calls": 0,
+      "text": "hallo",
+      "tool_calls": [],
+      "error": null,
+      "partial_response": null,
+      "response": {
+        "id": "gen-1791093045-QY3H49CbzmRdDorjypRd",
+        "object": "chat.completion",
+        "created": 1791093045,
+        "model": "mimo-v2.5-free",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "hallo"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 20312,
+          "completion_tokens": 51,
+          "total_tokens": 20363,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 14336,
+            "cache_write_tokens": 0
+          },
+          "completion_tokens_details": {
+            "audio_tokens": 0,
+            "reasoning_tokens": 47
+          }
+        }
+      }
+    }
+  ]
+}

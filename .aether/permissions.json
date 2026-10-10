@@ -1,0 +1,26 @@
+{
+  "read_files": {
+    "inside": "allow",
+    "outside": "allow"
+  },
+  "modify_files": {
+    "inside": "allow",
+    "outside": "allow"
+  },
+  "delete_files": {
+    "inside": "allow",
+    "outside": "allow"
+  },
+  "move_files": {
+    "inside": "allow",
+    "outside": "allow"
+  },
+  "terminal_read": {
+    "inside": "allow",
+    "outside": "allow"
+  },
+  "terminal_mutating": {
+    "inside": "allow",
+    "outside": "allow"
+  }
+}

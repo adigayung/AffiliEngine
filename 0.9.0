@@ -1,0 +1,7 @@
+Collecting pedalboard
+  Downloading pedalboard-0.9.25-cp310-cp310-win_amd64.whl.metadata (58 kB)
+Requirement already satisfied: numpy in .\conda\lib\site-packages (from pedalboard) (2.2.6)
+Downloading pedalboard-0.9.25-cp310-cp310-win_amd64.whl (3.7 MB)
+   ---------------------------------------- 3.7/3.7 MB 4.9 MB/s  0:00:00
+Installing collected packages: pedalboard
+Successfully installed pedalboard-0.9.25
