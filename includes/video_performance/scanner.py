@@ -3,7 +3,8 @@ VideoPerformanceScanner - Wrapper terhadap TikTokScraper (tiktok_scrape_videos).
 
 Scanner hanya bertanggung jawab:
 1. Menerima username
-2. Memanggil TikTokScraper.run()
+2. Memanggil TikTokScraper.run() -> video yang berhasil ditemukan dengan
+   HARD LIMIT MAX_VIDEOS (190 video unik) dan MAX_SCROLLS (8 scroll)
 3. Menormalisasi field name (id->video_id, desc->caption, upload_date->upload_time)
 4. Mengembalikan list[dict]
 
@@ -19,7 +20,7 @@ import logging
 import threading
 import time
 
-from includes.tiktok_scrape_videos import TikTokScraper
+from includes.tiktok_scrape_videos import TikTokScraper, MAX_VIDEOS
 
 CAPTCHA_POLL_INTERVAL = 0.5
 DRIVER_WAIT_TIMEOUT = 20
@@ -29,6 +30,9 @@ class VideoPerformanceScanner:
 
     def __init__(self, profile_path="./chromium", scroll_count=5, timeout=60, captcha_timeout=300, debug=True):
         self.profile_path = profile_path
+        # scroll_count dipertahankan untuk backward compatibility. Nilai ini TIDAK
+        # lagi dipakai sebagai cap jumlah video: scanner memakai hard limit
+        # MAX_VIDEOS (190) & MAX_SCROLLS (8) dari modul scraper.
         self.scroll_count = scroll_count
         self.timeout = timeout
         self.captcha_timeout = captcha_timeout
@@ -55,7 +59,9 @@ class VideoPerformanceScanner:
         username = username.strip()
         scraper = TikTokScraper(
             username=username,
-            max_videos=max(20, self.scroll_count * 10),
+            # HARD LIMIT: MAX_VIDEOS (190) video unik & MAX_SCROLLS (8) scroll.
+            # Tidak ada lagi mode unlimited (max_videos=0).
+            max_videos=MAX_VIDEOS,
             profile_path=self.profile_path,
         )
         try:
@@ -79,7 +85,9 @@ class VideoPerformanceScanner:
         username = username.strip()
         scraper = TikTokScraper(
             username=username,
-            max_videos=max(20, self.scroll_count * 10),
+            # HARD LIMIT yang sama seperti scan(): MAX_VIDEOS video unik,
+            # MAX_SCROLLS scroll. Tidak ada mode unlimited.
+            max_videos=MAX_VIDEOS,
             profile_path=self.profile_path,
         )
         try:

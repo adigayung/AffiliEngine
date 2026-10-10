@@ -24,7 +24,21 @@ from .driver import create_driver
 logger = logging.getLogger(__name__)
 
 TIKTOK_BASE_URL = "https://www.tiktok.com/@"
+
+# Jaring pengaman: berhenti bila tidak ada video baru selama N scroll berturut-turut.
 STALL_LIMIT = 8
+
+# ============================================================
+# HARD LIMIT (satu sumber konfigurasi untuk seluruh scraper):
+#   - MAX_VIDEOS  : maksimal video UNIK yang dikumpulkan/disimpan per creator.
+#   - MAX_SCROLLS : maksimal scroll ke bawah selama proses scraping.
+#
+# Scraper berhenti begitu SALAH SATU limit tercapai dan TIDAK melakukan scroll
+# tambahan. Tidak ada lagi mode unlimited (max_videos=0 tidak lagi berarti
+# "semua video").
+# ============================================================
+MAX_VIDEOS = 190
+MAX_SCROLLS = 8
 
 # JavaScript: ambil urutan video ID dari DOM
 JS_GET_ID_ORDER = """
@@ -48,18 +62,20 @@ class TikTokScraper:
 
     Args:
         username: Username TikTok (tanpa @)
-        max_videos: Jumlah maksimal video (0 = semua)
+        max_videos: Jumlah maksimal video (default MAX_VIDEOS=190). Nilai <= 0
+            diperlakukan sebagai MAX_VIDEOS; nilai lebih besar dijepit ke
+            MAX_VIDEOS (hard limit). TIDAK ada mode unlimited.
         output_file: True=simpan file JSON/TXT/CSV, False=tidak (default False)
         profile_path: Path ke folder Chromium profile (opsional)
         output_dir: Folder untuk output file (opsional)
 
     Usage:
         # Basic - tanpa file output (programmatic)
-        scraper = TikTokScraper("salehot0", max_videos=20)
+        scraper = TikTokScraper("salehot0", max_videos=MAX_VIDEOS)
         videos = scraper.run()
 
         # Dengan file output
-        scraper = TikTokScraper("salehot0", max_videos=20, output_file=True)
+        scraper = TikTokScraper("salehot0", max_videos=MAX_VIDEOS, output_file=True)
         videos = scraper.run()
 
         # Hasil:
@@ -67,9 +83,15 @@ class TikTokScraper:
             print(v["id"], v["views"], v["upload_date"], v["desc"][:30])
     """
 
-    def __init__(self, username, max_videos=0, output_file=False, profile_path=None, output_dir=None):
+    def __init__(self, username, max_videos=MAX_VIDEOS, output_file=False, profile_path=None, output_dir=None):
         self.username = username
-        self.max_videos = max_videos if max_videos > 0 else 999999
+        # HARD LIMIT: tidak ada lagi mode unlimited. Nilai max_videos <= 0
+        # (termasuk 0) diperlakukan sebagai MAX_VIDEOS, dan nilai yang lebih
+        # besar tetap dijepit ke MAX_VIDEOS. Jumlah video unik SELALU <= MAX_VIDEOS.
+        requested = int(max_videos) if max_videos else 0
+        if requested <= 0:
+            requested = MAX_VIDEOS
+        self.max_videos = min(requested, MAX_VIDEOS)
         self.output_file = output_file
         self.profile_path = profile_path or os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "chromium"
@@ -204,23 +226,49 @@ class TikTokScraper:
             return None
 
     def _count_links(self):
+        """
+        Hitung jumlah video UNIK yang terlihat di DOM.
+
+        Dedup berdasarkan video id (bukan sekadar jumlah elemen <a>), supaya
+        hard limit MAX_VIDEOS dihitung dari video unik, bukan anchor duplikat.
+        """
         try:
             return self._driver.execute_script(
-                "return document.querySelectorAll('a[href*=\"/video/\"]').length;"
+                """
+                var items = document.querySelectorAll('a[href*="/video/"]');
+                var seen = {};
+                var n = 0;
+                items.forEach(function(a) {
+                    var m = (a.getAttribute('href')||'').match(/\\/video\\/(\\d+)/);
+                    if (m && !seen[m[1]]) { seen[m[1]] = true; n++; }
+                });
+                return n;
+                """
             )
         except Exception:
             return 0
 
     def _scroll_until_done(self):
-        max_scrolls = min(500, self.max_videos * 2 + 5) if self.max_videos != 999999 else 500
-        min_scrolls = min(3, max_scrolls)
-
-        for i in range(max_scrolls):
+        # HARD LIMIT: maksimal MAX_SCROLLS kali scroll ke bawah. Loop ini
+        # menjamin tidak akan pernah ada scroll ke-(MAX_SCROLLS + 1).
+        for i in range(MAX_SCROLLS):
             link_count = self._count_links()
-            if i >= min_scrolls and link_count >= self.max_videos:
-                logger.info("Target %d video tercapai (links=%d).", self.max_videos, link_count)
+
+            # Berhenti LEBIH AWAL bila target video unik sudah tercapai:
+            # tidak ada browser operation lagi setelah limit tercapai.
+            if link_count >= self.max_videos:
+                logger.info(
+                    "Target %d video unik tercapai (links=%d) pada scroll #%d. Berhenti.",
+                    self.max_videos, link_count, i,
+                )
                 return
+
+            # Jaring pengaman: tidak ada video baru selama STALL_LIMIT scroll.
             if self._stalled >= STALL_LIMIT:
+                logger.info(
+                    "Scroll selesai: tidak ada video baru %d kali berturut-turut (links=%d).",
+                    STALL_LIMIT, link_count,
+                )
                 return
 
             self._driver.execute_script("window.scrollBy(0, window.innerHeight*0.8);")
@@ -228,8 +276,20 @@ class TikTokScraper:
             new_count = self._count_links()
             self._stalled = 0 if new_count > link_count else self._stalled + 1
 
-            pct = f"{min(100, new_count * 100 // self.max_videos)}%" if self.max_videos != 999999 else f"{new_count}v"
-            logger.info("Scroll #%d | links=%d | %s | stalled=%d", i + 1, new_count, pct, self._stalled)
+            pct = f"{min(100, new_count * 100 // self.max_videos)}%"
+            logger.info(
+                "Scroll #%d/%d | links=%d | %s | stalled=%d",
+                i + 1, MAX_SCROLLS, new_count, pct, self._stalled,
+            )
+
+            # Berhenti TEPAT setelah scroll bila target sudah tercapai, supaya
+            # tidak ada scroll tambahan.
+            if new_count >= self.max_videos:
+                logger.info(
+                    "Target %d video unik tercapai setelah scroll #%d. Berhenti.",
+                    self.max_videos, i + 1,
+                )
+                return
 
     def _collect_api(self):
         """Baca data dari JS interceptor."""
@@ -301,13 +361,25 @@ class TikTokScraper:
         for vid in api_ids - dom_ids:
             self.videos.append(self._api[vid])
 
-        # Batasi
-        if self.max_videos != 999999 and len(self.videos) > self.max_videos:
+        # HARD LIMIT: maksimal MAX_VIDEOS video UNIK. self.videos sudah unik
+        # karena berasal dari dict self._api (key = video id) + urutan DOM yang
+        # sudah ter-dedup.
+        if len(self.videos) > self.max_videos:
+            logger.warning(
+                "Hard cap max_videos=%d aktif: %d video unik ditemukan, hanya %d yang diproses.",
+                self.max_videos, len(self.videos), self.max_videos,
+            )
             self.videos = self.videos[:self.max_videos]
 
         wd = sum(1 for v in self.videos if v["desc"])
         wu = sum(1 for v in self.videos if v["upload_date"])
         logger.info("Merge: %d video (caption=%d date=%d)", len(self.videos), wd, wu)
+        # Observability: berapa yang diperoleh vs berapa yang akan diproses.
+        logger.info(
+            "Videos fetched: api=%d dom=%d | after dedup/merge=%d | hard_cap=%d max_scrolls=%d",
+            len(self._api), len(self._dom_order), len(self.videos),
+            self.max_videos, MAX_SCROLLS,
+        )
 
     def _download_thumbnails(self):
         """

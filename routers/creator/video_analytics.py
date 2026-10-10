@@ -36,9 +36,13 @@ def video_analytics_update(creator_id):
 
     Router hanya sebagai coordinator. Business logic ada di
     includes.video_analytics.video_analytics.update_creator_analytics()
+
+    Catatan: HARD LIMIT (MAX_VIDEOS=190 video unik, MAX_SCROLLS=8 scroll)
+    ditetapkan di level service/scraper, BUKAN di router. Router sengaja
+    memakai default service (max_videos=MAX_VIDEOS) supaya tidak ada lagi
+    mode unlimited (max_videos=0).
     """
-    max_videos = 90
-    result = update_creator_analytics(creator_id, max_videos)
+    result = update_creator_analytics(creator_id)
 
     # Lakukan video-job matching hanya jika update analytics berhasil
     if result.get("success"):
@@ -75,8 +79,12 @@ def video_analytics(creator_id):
     total_video = data.get("total_video", 0)
     stats = data.get("statistics", {})
 
-    # Growth = sum of per-video growth values
-    total_views_growth = sum(v.get("views_growth", 0) or 0 for v in videos)
+    # "Perubahan Hari Ini" = sum of per-video growth HARI INI saja.
+    # Video yang snapshot terakhirnya BUKAN hari ini (stale) tidak menyumbang.
+    # Definisi tanggal ini sama dengan daily views chart
+    # (get_creator_daily_views_chart -> point hari ini), sehingga:
+    #     summary_today == daily_views_chart[today]
+    total_views_growth = sum(v.get("views_growth_today", 0) or 0 for v in videos)
     total_likes_growth = sum(v.get("likes_growth", 0) or 0 for v in videos)
     total_comments_growth = sum(v.get("comments_growth", 0) or 0 for v in videos)
     total_shares_growth = sum(v.get("shares_growth", 0) or 0 for v in videos)

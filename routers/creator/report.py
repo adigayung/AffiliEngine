@@ -42,6 +42,29 @@ def _format_datetime(dt):
     return str(dt)
 
 
+def _parse_datetime(value):
+    """
+    Ubah nilai datetime dari database menjadi datetime object.
+
+    Nilai kolom datetime dari DB umumnya sudah berupa datetime, tetapi
+    string juga didukung agar aman terhadap perbedaan driver / hasil JOIN.
+
+    Returns:
+        datetime.datetime atau None bila tidak dapat diparse.
+    """
+    if isinstance(value, datetime.datetime):
+        return value
+    if isinstance(value, datetime.date):
+        return datetime.datetime(value.year, value.month, value.day)
+    if isinstance(value, str):
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+    return None
+
+
 def _get_folder_name(full_path):
     """Ambil nama folder terakhir dari path."""
     if not full_path:
@@ -397,7 +420,12 @@ def remove_schedule(creator_id):
     Proses:
     1. Validasi upload job milik creator.
     2. Hapus record upload_jobs dari database.
-    3. Hapus folder schedule secara recursive (hanya folder schedule yang valid).
+    3. Hapus folder schedule secara recursive (hanya folder schedule yang valid),
+       KECUALI untuk job berstatus 'scheduled' — file/folder di storage TIDAK
+       dihapus agar jadwal yang belum tayang aman.
+
+    Catatan status 'scheduled': kolom status database = 'uploaded' DAN
+    schedule_datetime > sekarang (lihat _compute_display_status).
     """
     payload = request.get_json(silent=True) or {}
     job_id = payload.get("job_id")
@@ -410,7 +438,7 @@ def remove_schedule(creator_id):
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, folder
+                SELECT id, folder, status, schedule_datetime
                 FROM upload_jobs
                 WHERE id = %s AND creator_id = %s
                 LIMIT 1
@@ -426,13 +454,25 @@ def remove_schedule(creator_id):
 
     folder = row.get("folder") or ""
 
+    # Tentukan apakah job ini berstatus 'scheduled' (belum tayang).
+    sched_dt = _parse_datetime(row.get("schedule_datetime"))
+    is_scheduled = (
+        sched_dt is not None
+        and _compute_display_status(
+            row.get("status"), sched_dt, datetime.datetime.now()
+        ) == "scheduled"
+    )
+
     # 1. Hapus record database
     if not delete_upload_job(job_id):
         return jsonify({"success": False, "message": "Gagal menghapus data schedule dari database."})
 
-    # 2. Hapus folder schedule dari disk (recursive)
+    # 2. Hapus folder schedule dari disk (recursive).
+    #    Untuk status 'scheduled' folder TIDAK PERNAH dihapus.
     notes = []
-    if folder:
+    if is_scheduled:
+        notes.append("File/folder di storage tidak dihapus untuk status scheduled.")
+    elif folder:
         if not os.path.isdir(folder):
             notes.append("Folder schedule sudah tidak ada di disk.")
         elif not _is_schedule_folder(folder):
@@ -558,6 +598,119 @@ def _bulk_delete_pending_jobs(creator_id, job_ids):
         conn.close()
 
 
+def _bulk_delete_scheduled_jobs(creator_id, job_ids):
+    """
+    Hapus banyak upload_jobs berstatus 'scheduled' milik creator dalam satu
+    transaction, lalu bersihkan schedule_batches yang sudah tidak memiliki
+    upload_jobs.
+
+    Definisi 'scheduled' SAMA dengan yang ditampilkan pada halaman report:
+    kolom status='uploaded' DAN schedule_datetime > sekarang (lihat
+    _compute_display_status). Dengan begitu, job yang benar-benar sudah
+    tayang (uploaded, schedule_datetime <= sekarang) TIDAK ikut terhapus.
+
+    Aturan penting:
+    - Penghapusan HANYA menyentuh record database. Folder/file di storage
+      TIDAK PERNAH dihapus (tidak ada opsi delete_folders di sini), sesuai
+      permintaan agar product scheduled dapat dihapus tanpa menghapus file.
+    - schedule_batches dihapus HANYA jika COUNT(upload_jobs) per batch = 0.
+
+    Returns:
+        dict atau None (None = error database, transaction di-rollback):
+        {
+            "deleted_ids": [int],
+            "skipped_ids": [int],
+            "removed_batches": [int],
+        }
+    """
+    placeholders = ", ".join(["%s"] * len(job_ids))
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. Ambil data langsung dari database (JANGAN percaya data frontend).
+            cursor.execute(
+                f"""
+                SELECT id, batch_id, status, schedule_datetime
+                FROM upload_jobs
+                WHERE creator_id = %s AND id IN ({placeholders})
+                """,
+                [creator_id] + list(job_ids)
+            )
+            rows = cursor.fetchall()
+
+            now = datetime.datetime.now()
+            scheduled_ids = []
+            skipped_ids = []
+            for r in rows:
+                sched_dt = _parse_datetime(r.get("schedule_datetime"))
+                if (
+                    sched_dt is not None
+                    and _compute_display_status(r.get("status"), sched_dt, now) == "scheduled"
+                ):
+                    scheduled_ids.append(r["id"])
+                else:
+                    skipped_ids.append(r["id"])
+
+            if not scheduled_ids:
+                return {
+                    "deleted_ids": [],
+                    "skipped_ids": skipped_ids,
+                    "removed_batches": [],
+                }
+
+            scheduled_set = set(scheduled_ids)
+            batch_ids = sorted({
+                r["batch_id"]
+                for r in rows
+                if r["id"] in scheduled_set and r.get("batch_id")
+            })
+
+            # 2. Hapus job yang valid (scheduled + milik creator).
+            #    Filter status & schedule_datetime diulang di SQL sebagai
+            #    double-check. Tidak ada operasi filesystem di sini.
+            del_placeholders = ", ".join(["%s"] * len(scheduled_ids))
+            cursor.execute(
+                f"""
+                DELETE FROM upload_jobs
+                WHERE creator_id = %s
+                  AND status = 'uploaded'
+                  AND schedule_datetime > %s
+                  AND id IN ({del_placeholders})
+                """,
+                [creator_id, now] + scheduled_ids
+            )
+
+            # 3. Bersihkan schedule_batches yang sudah tidak punya upload_jobs.
+            removed_batches = []
+            for batch_id in batch_ids:
+                cursor.execute(
+                    "SELECT COUNT(*) AS cnt FROM upload_jobs WHERE batch_id = %s",
+                    (batch_id,)
+                )
+                cnt = cursor.fetchone()["cnt"]
+                if cnt == 0:
+                    cursor.execute(
+                        "DELETE FROM schedule_batches WHERE id = %s AND creator_id = %s",
+                        (batch_id, creator_id)
+                    )
+                    removed_batches.append(batch_id)
+
+        conn.commit()
+
+        return {
+            "deleted_ids": scheduled_ids,
+            "skipped_ids": skipped_ids,
+            "removed_batches": removed_batches,
+        }
+
+    except Exception as e:
+        conn.rollback()
+        print(f"_bulk_delete_scheduled_jobs() error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
 def _is_job_folder(path):
     """
     Validasi folder job: leaf DAN parent-nya harus folder schedule
@@ -603,16 +756,19 @@ def _delete_job_folders(folders):
 @creator_report_bp.route("/<int:creator_id>/report/bulk_delete", methods=["POST"])
 def bulk_delete_upload_jobs(creator_id):
     """
-    Bulk delete upload jobs (hanya status pending) milik creator.
+    Bulk delete upload jobs (status pending & scheduled) milik creator.
 
     Request JSON:
         {"job_ids": [101, 102, 103], "delete_folders": false}
 
     - Data job dibaca dari database berdasarkan job_ids (folder path dari DB).
-    - Hanya job status 'pending' yang diproses; scheduled/uploaded tetap aman.
+    - Job berstatus 'pending' dan 'scheduled' boleh dihapus; status lain
+      (uploaded yang sudah tayang, failed, cancelled) diabaikan.
     - schedule_batches yang sudah tidak memiliki upload_jobs ikut dihapus.
     - delete_folders (default false) menghapus folder project/job dari disk
-      dengan validasi ketat (folder job, bukan folder parent).
+      dengan validasi ketat (folder job, bukan folder parent). Opsi ini HANYA
+      berlaku untuk job 'pending'. Job 'scheduled' SELALU dihapus tanpa
+      menyentuh file/folder di storage.
     """
     payload = request.get_json(silent=True) or {}
     raw_ids = payload.get("job_ids")
@@ -626,31 +782,48 @@ def bulk_delete_upload_jobs(creator_id):
     if not job_ids:
         return jsonify({"success": False, "message": "Tidak ada job yang dipilih."})
 
-    result = _bulk_delete_pending_jobs(creator_id, job_ids)
-    if result is None:
+    pending_result = _bulk_delete_pending_jobs(creator_id, job_ids)
+    scheduled_result = _bulk_delete_scheduled_jobs(creator_id, job_ids)
+
+    if pending_result is None or scheduled_result is None:
         return jsonify({
             "success": False,
             "message": "Terjadi kesalahan saat menghapus data dari database.",
         })
 
-    deleted_ids = result["deleted_ids"]
-    if not deleted_ids:
-        message = "Tidak ada upload job yang bisa dihapus (hanya status pending yang diizinkan)."
-        if result["skipped_ids"]:
-            message += " Job dengan status selain pending diabaikan."
-        return jsonify({"success": False, "message": message})
+    deleted_pending_ids = pending_result["deleted_ids"]
+    deleted_scheduled_ids = scheduled_result["deleted_ids"]
+    deleted_ids = deleted_pending_ids + deleted_scheduled_ids
 
+    if not deleted_ids:
+        return jsonify({
+            "success": False,
+            "message": (
+                "Tidak ada upload job yang bisa dihapus "
+                "(hanya status pending dan scheduled yang diizinkan)."
+            ),
+        })
+
+    # delete_folders HANYA berlaku untuk pending. Job scheduled tidak pernah
+    # memicu penghapusan file/folder di storage.
     notes = []
     if delete_folders:
-        notes.extend(_delete_job_folders(result["folders"]))
+        notes.extend(_delete_job_folders(pending_result["folders"]))
+
+    removed_batches = pending_result["removed_batches"] + scheduled_result["removed_batches"]
+    skipped_count = len(set(job_ids) - set(deleted_ids))
 
     message = f"{len(deleted_ids)} upload job berhasil dihapus."
-    if result["removed_batches"]:
-        message += f" {len(result['removed_batches'])} batch kosong ikut dihapus."
-    if result["skipped_ids"]:
+    if deleted_scheduled_ids:
         message += (
-            f" {len(result['skipped_ids'])} job diabaikan "
-            f"karena bukan status pending."
+            f" {len(deleted_scheduled_ids)} job scheduled dihapus "
+            f"tanpa menghapus file di storage."
+        )
+    if removed_batches:
+        message += f" {len(set(removed_batches))} batch kosong ikut dihapus."
+    if skipped_count:
+        message += (
+            f" {skipped_count} job diabaikan karena bukan status pending/scheduled."
         )
     if notes:
         message += " " + " ".join(notes)

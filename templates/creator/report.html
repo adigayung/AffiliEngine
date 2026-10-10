@@ -238,12 +238,13 @@
                             </div>
                         </div>
                     </a>
-                    {% if up.display_status == 'pending' %}
+                    {% if up.display_status in ['pending', 'scheduled'] %}
                     <input
                         type="checkbox"
                         class="form-check-input bulk-job-checkbox"
                         data-job-id="{{ up.upload_job_id }}"
-                        title="Pilih untuk bulk delete">
+                        data-job-status="{{ up.display_status }}"
+                        title="Pilih untuk dihapus">
                     {% endif %}
                     </div>
                 </div>
@@ -351,9 +352,13 @@
                     Tindakan ini akan:
                     <ul class="mt-2 mb-0 ps-3">
                         <li>Menghapus data schedule dari database.</li>
-                        <li>Menghapus folder schedule beserta seluruh isinya dari disk.</li>
+                        <li id="remove-folder-bullet">Menghapus folder schedule beserta seluruh isinya dari disk.</li>
                         <li>Tindakan ini tidak dapat dibatalkan.</li>
                     </ul>
+                </div>
+                <div class="text-muted extra-small mt-2 d-none" id="remove-scheduled-note">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Status scheduled: file/folder di storage TIDAK dihapus.
                 </div>
             </div>
             <div class="modal-footer">
@@ -389,7 +394,7 @@
                         <li>Tindakan ini tidak dapat dibatalkan.</li>
                     </ul>
                 </div>
-                <div class="form-check mt-3">
+                <div class="form-check mt-3" id="bulk-delete-folder-wrapper">
                     <input class="form-check-input" type="checkbox" id="bulk-delete-folder-check">
                     <label class="form-check-label" for="bulk-delete-folder-check">
                         Hapus folder project video
@@ -397,6 +402,10 @@
                     <div class="text-muted extra-small">
                         Jika dicentang, folder project milik job yang dipilih juga dihapus dari disk.
                     </div>
+                </div>
+                <div class="text-muted extra-small mt-2 d-none" id="bulk-scheduled-note">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Job berstatus scheduled dihapus tanpa menghapus file di storage.
                 </div>
             </div>
             <div class="modal-footer">
@@ -494,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // UPLOAD INFORMATION MODAL + REMOVE SCHEDULE
     // ============================================================
     var currentRemoveJobId = null;
+    var currentRemoveStatus = null;
     var infoModalEl = document.getElementById('modalUploadInfo');
     var confirmModalEl = document.getElementById('modalConfirmRemove');
 
@@ -545,12 +555,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         currentRemoveJobId = btn.getAttribute('data-job-id');
+        currentRemoveStatus = btn.getAttribute('data-status');
         var modal = bootstrap.Modal.getOrCreateInstance(infoModalEl);
         modal.show();
     };
 
     document.getElementById('btn-remove-schedule').addEventListener('click', function() {
         if (!currentRemoveJobId) return;
+
+        // Untuk status scheduled: JANGAN tampilkan konfirmasi hapus file/folder.
+        // File pada storage tidak akan dihapus (lihat remove_schedule backend).
+        var isScheduled = (currentRemoveStatus === 'Scheduled');
+        var folderBullet = document.getElementById('remove-folder-bullet');
+        var scheduledNote = document.getElementById('remove-scheduled-note');
+        if (folderBullet) folderBullet.classList.toggle('d-none', isScheduled);
+        if (scheduledNote) scheduledNote.classList.toggle('d-none', !isScheduled);
+
         var infoModal = bootstrap.Modal.getInstance(infoModalEl);
         if (infoModal) infoModal.hide();
         resetModalBackdrops();
@@ -614,14 +634,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('bulk-delete-count').textContent = count;
     }
 
-    // Event delegation: checkbox hanya dirender untuk status pending,
-    // jadi hanya job pending yang bisa masuk ke selectedJobIds.
+    // Event delegation: checkbox hanya dirender untuk status pending &
+    // scheduled, jadi hanya job dengan dua status itu yang bisa dipilih.
     document.addEventListener('change', function(e) {
         var t = e.target;
         if (!t || !t.classList || !t.classList.contains('bulk-job-checkbox')) return;
         var jobId = t.getAttribute('data-job-id');
         if (t.checked) {
-            selectedJobIds[jobId] = true;
+            selectedJobIds[jobId] = t.getAttribute('data-job-status') || 'pending';
         } else {
             delete selectedJobIds[jobId];
         }
@@ -633,13 +653,31 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBulkDeleteToolbar();
     });
 
+    function hasPendingSelected() {
+        return Object.keys(selectedJobIds).some(function(id) {
+            return selectedJobIds[id] === 'pending';
+        });
+    }
+
     bulkDeleteBtn.addEventListener('click', function() {
         var ids = Object.keys(selectedJobIds);
         if (ids.length === 0) return;
         document.getElementById('bulk-modal-count').textContent = ids.length;
         document.getElementById('bulk-confirm-count').textContent = ids.length;
+
         // Checkbox "Hapus folder project video" SELALU default OFF
-        document.getElementById('bulk-delete-folder-check').checked = false;
+        var folderCheck = document.getElementById('bulk-delete-folder-check');
+        folderCheck.checked = false;
+
+        // Opsi hapus folder hanya relevan untuk job pending (yang memiliki
+        // folder project). Job scheduled TIDAK menampilkan konfirmasi hapus
+        // file/folder di storage.
+        var pendingSelected = hasPendingSelected();
+        var folderWrapper = document.getElementById('bulk-delete-folder-wrapper');
+        var scheduledNote = document.getElementById('bulk-scheduled-note');
+        if (folderWrapper) folderWrapper.classList.toggle('d-none', !pendingSelected);
+        if (scheduledNote) scheduledNote.classList.toggle('d-none', pendingSelected);
+
         bootstrap.Modal.getOrCreateInstance(bulkConfirmModalEl).show();
     });
 

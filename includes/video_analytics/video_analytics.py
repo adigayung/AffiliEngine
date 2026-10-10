@@ -18,16 +18,42 @@ TIDAK menangani:
     - Background job
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from includes.mysql import get_connection, get_creator
 from includes.mysql import upsert_tiktok_video, upsert_video_daily_stats
-from includes.tiktok_scrape_videos import TikTokScraper
+from includes.tiktok_scrape_videos import TikTokScraper, MAX_VIDEOS
 from includes.logFX import logger, INFO, WARNING, ERROR
 
 # ==============================
 # KONSTANTA LOG PREFIX
 # ==============================
 LOG_PREFIX = "[VideoAnalytics]"
+
+
+def _as_date(value):
+    """
+    Normalisasi nilai snapshot_time (datetime / date / str) menjadi objek date.
+
+    Dipakai untuk menentukan apakah sebuah snapshot berasal dari HARI INI,
+    supaya definisi "Perubahan Hari Ini" pada summary konsisten dengan
+    semantik tanggal yang dipakai daily views chart (DATE(snapshot_time)).
+
+    Args:
+        value: Nilai snapshot_time dari database (datetime, date, atau str).
+
+    Returns:
+        datetime.date, atau None bila nilai kosong / tidak dapat ditafsirkan.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
 
 
 class VideoAnalyticsService:
@@ -101,20 +127,27 @@ class VideoAnalyticsService:
             # Tetap kembalikan data default, jangan raise exception
             return self._empty_result(creator_id)
 
-    def update_creator_analytics(self, creator_id: int, max_videos: int) -> dict:
+    def update_creator_analytics(self, creator_id: int, max_videos: int = MAX_VIDEOS) -> dict:
         """
         Update analytics untuk satu Creator.
 
         Workflow:
             1. Validasi creator
-            2. Scrape seluruh video terbaru dari TikTok
+            2. Scrape video dari TikTok
+               (HARD LIMIT: MAX_VIDEOS video unik & MAX_SCROLLS kali scroll)
             3. Sinkronisasi ke tiktok_videos (INSERT/UPDATE metadata)
             4. Simpan snapshot statistik ke tiktok_video_stats
             5. Baca kembali analytics terbaru dari database
             6. Kembalikan result
 
+        Catatan: jumlah video hasil collection dibatasi keras MAX_VIDEOS (190).
+        Nilai max_videos <= 0 diperlakukan sebagai MAX_VIDEOS (TIDAK ADA lagi
+        mode unlimited). DB tidak akan menerima lebih dari MAX_VIDEOS video dari
+        satu kali collection. Batas scroll dikendalikan di level scraper.
+
         Args:
             creator_id: ID creator dari tabel creators
+            max_videos: cap jumlah video; <= 0 -> MAX_VIDEOS, > MAX_VIDEOS dijepit
 
         Returns:
             dict: {
@@ -124,6 +157,14 @@ class VideoAnalyticsService:
                 "total_videos": int,
                 "new_videos": int,
                 "updated_videos": int,
+                "fetched": int,             # video yang berhasil diperoleh
+                "filtered": int,            # setelah dedup/filter
+                "processed": int,           # video yang dicoba disinkronkan
+                "processed_success": int,
+                "processed_failed": int,
+                "snapshots_written": int,   # snapshot tiktok_video_stats ditulis
+                "skipped_no_id": int,
+                "failures": list[dict],     # [{video_id, error}, ...]
             }
         """
         try:
@@ -152,12 +193,26 @@ class VideoAnalyticsService:
             # ==============================
             logger(INFO, f"{LOG_PREFIX} Memulai scraping TikTok @{username}...")
 
+            # HARD LIMIT: tidak ada mode unlimited. Nilai <= 0 -> MAX_VIDEOS,
+            # nilai lebih besar tetap dijepit ke MAX_VIDEOS.
+            if not max_videos or int(max_videos) <= 0:
+                limit = MAX_VIDEOS
+            else:
+                limit = min(int(max_videos), MAX_VIDEOS)
+
             scraper = TikTokScraper(
                 username=username,
-                max_videos=max_videos,  # 0 = semua video
+                max_videos=limit,
                 output_file=False
             )
             scraped_videos = scraper.run()
+
+            # Pertahanan berlapis: DB tidak boleh menerima > MAX_VIDEOS video
+            # hasil collection, walau scraper seharusnya sudah membatasi.
+            if len(scraped_videos) > MAX_VIDEOS:
+                logger(WARNING, f"{LOG_PREFIX} Hasil scraping {len(scraped_videos)} "
+                                f"melebihi hard limit {MAX_VIDEOS}; dipotong ke {MAX_VIDEOS}.")
+                scraped_videos = scraped_videos[:MAX_VIDEOS]
 
             if not scraped_videos:
                 logger(WARNING, f"{LOG_PREFIX} Scraping tidak menghasilkan video")
@@ -174,15 +229,36 @@ class VideoAnalyticsService:
 
             # ==============================
             # STEP 3: SINKRONISASI DATABASE
+            # SEMUA video yang berhasil diperoleh diproses (tanpa artificial cap).
+            # Jangan memotong hasil scan: fetched == processed.
             # ==============================
             new_videos = 0
             updated_videos = 0
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            fetched = len(scraped_videos)     # video yang berhasil diperoleh dari sumber
+            filtered = len(scraped_videos)    # setelah dedup/filter (dilakukan di scraper)
+            processed = 0                     # video yang benar-benar dicoba disinkronkan
+            processed_success = 0
+            processed_failed = 0
+            snapshots_written = 0
+            skipped_no_id = 0
+            failures = []
+
             for sv in scraped_videos:
+                video_id = sv.get("id", "")
+                if not video_id:
+                    # Tidak bisa diproses, tapi TIDAK dibuang diam-diam.
+                    skipped_no_id += 1
+                    failures.append({"video_id": "", "error": "video tanpa id"})
+                    logger(WARNING, f"{LOG_PREFIX} Video tanpa id dilewati (tidak dapat diproses).")
+                    continue
+
+                processed += 1
+
                 # Map scraper data ke format yang diterima upsert_tiktok_video
                 video_data = {
-                    "video_id": sv.get("id", ""),
+                    "video_id": video_id,
                     "video_url": sv.get("video_url", ""),
                     "caption": sv.get("desc", ""),
                     "upload_time": sv.get("upload_date", None),
@@ -203,12 +279,24 @@ class VideoAnalyticsService:
                         favorites=sv.get("favorites", 0),
                         snapshot_time=now_str
                     )
+                    processed_success += 1
+                    snapshots_written += 1
                 except Exception as e:
-                    logger(ERROR, f"{LOG_PREFIX} Gagal sinkronisasi video {sv.get('id', '?')}: {e}")
+                    # Kegagalan dilaporkan, bukan disembunyikan.
+                    processed_failed += 1
+                    failures.append({"video_id": video_id, "error": str(e)})
+                    logger(ERROR, f"{LOG_PREFIX} Gagal sinkronisasi video {video_id}: {e}")
                     continue
 
-            logger(INFO, f"{LOG_PREFIX} Sinkronisasi selesai: "
-                         f"{len(scraped_videos)} video diproses")
+            # Observability: fetched/processed/success/failed/snapshots
+            logger(INFO, f"{LOG_PREFIX} Scan summary creator {creator_id} | "
+                         f"Videos fetched: {fetched} | After filtering: {filtered} | "
+                         f"Videos to process: {processed} | Processed success: {processed_success} | "
+                         f"Processed failed: {processed_failed} | Snapshots written: {snapshots_written}")
+            if skipped_no_id:
+                logger(WARNING, f"{LOG_PREFIX} {skipped_no_id} video dilewati karena tidak memiliki id.")
+            for f in failures:
+                logger(WARNING, f"{LOG_PREFIX} FAILED video {f['video_id'] or '?'}: {f['error']}")
 
             # ==============================
             # STEP 5: BACA ANALYTICS TERBARU
@@ -226,6 +314,15 @@ class VideoAnalyticsService:
                 "total_videos": total_videos,
                 "new_videos": new_videos,
                 "updated_videos": updated_videos,
+                # Coverage metrics (fetched == processed bila tidak ada kegagalan)
+                "fetched": fetched,
+                "filtered": filtered,
+                "processed": processed,
+                "processed_success": processed_success,
+                "processed_failed": processed_failed,
+                "snapshots_written": snapshots_written,
+                "skipped_no_id": skipped_no_id,
+                "failures": failures,
             }
 
         except Exception as e:
@@ -376,6 +473,11 @@ class VideoAnalyticsService:
                     # ==============================
                     # BENTUK DAFTAR VIDEO
                     # ==============================
+                    # Tanggal "hari ini" (lokal) dipakai untuk memfilter snapshot
+                    # yang benar-benar hari ini — sama seperti batas window
+                    # daily views chart (get_creator_daily_views_chart).
+                    today = datetime.now().date()
+
                     videos = []
                     for row in video_rows:
                         video_pk = row["id"]
@@ -390,12 +492,26 @@ class VideoAnalyticsService:
                         shares = curr.get("shares", 0)
                         favorites = curr.get("favorites", 0)
 
-                        # Growth
+                        # Growth (snapshot terakhir vs snapshot sebelumnya)
                         views_growth = views - prev.get("views", views) if prev else 0
                         likes_growth = likes - prev.get("likes", likes) if prev else 0
                         comments_growth = comments - prev.get("comments", comments) if prev else 0
                         shares_growth = shares - prev.get("shares", shares) if prev else 0
                         favorites_growth = favorites - prev.get("favorites", favorites) if prev else 0
+
+                        # ==============================
+                        # GROWTH "PERUBAHAN HARI INI"
+                        # ==============================
+                        # Video hanya menyumbang ke "Perubahan Hari Ini" bila
+                        # snapshot `curr` benar-benar bertanggal HARI INI.
+                        # Video stale (snapshot terakhir bukan hari ini) => 0,
+                        # walau `views_growth` (snapshot terakhir) tetap > 0.
+                        # Delta negatif mengikuti kontrak chart: max(0, delta).
+                        snapshot_is_today = _as_date(curr.get("snapshot_time")) == today
+                        if snapshot_is_today and prev:
+                            views_growth_today = max(0, views - (prev.get("views", 0) or 0))
+                        else:
+                            views_growth_today = 0
 
                         total_views += views
                         total_likes += likes
@@ -435,6 +551,8 @@ class VideoAnalyticsService:
                             "duration_sec": duration_sec,
                             "views": views,
                             "views_growth": views_growth,
+                            "views_growth_today": views_growth_today,
+                            "snapshot_is_today": snapshot_is_today,
                             "likes": likes,
                             "likes_growth": likes_growth,
                             "comments": comments,
@@ -794,7 +912,7 @@ video_analytics_service = VideoAnalyticsService()
 # ==============================
 # STANDALONE FUNCTION
 # ==============================
-def update_creator_analytics(creator_id: int, max_videos: int = 0) -> dict:
+def update_creator_analytics(creator_id: int, max_videos: int = MAX_VIDEOS) -> dict:
     """
     Update analytics untuk satu Creator.
 
@@ -803,7 +921,8 @@ def update_creator_analytics(creator_id: int, max_videos: int = 0) -> dict:
 
     Args:
         creator_id: ID creator dari tabel creators
-        max_videos: Jumlah maksimal video yang di-scrape (0 = semua)
+        max_videos: Jumlah maksimal video yang di-scrape
+            (<= 0 -> MAX_VIDEOS, > MAX_VIDEOS dijepit)
 
     Returns:
         dict: {

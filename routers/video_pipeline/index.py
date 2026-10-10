@@ -84,6 +84,7 @@ class PipelineRunner:
         root_path: str,
         preserve_audio: bool,
         add_music: bool,
+        normalize_audio: bool,
         edit_audio_db: bool,
         audio_db: float,
     ):
@@ -94,6 +95,7 @@ class PipelineRunner:
                 log_callback=self.add_log,
                 preserve_audio=preserve_audio,
                 add_music=add_music,
+                normalize_audio=normalize_audio,
                 edit_audio_db=edit_audio_db,
                 audio_db=audio_db,
             )
@@ -108,6 +110,7 @@ class PipelineRunner:
         root_path: str,
         preserve_audio: bool = False,
         add_music: bool = True,
+        normalize_audio: bool = True,
         edit_audio_db: bool = False,
         audio_db: float = 0.0,
     ) -> bool:
@@ -119,7 +122,14 @@ class PipelineRunner:
         self.running = True
         self.thread = threading.Thread(
             target=self._run_pipeline,
-            args=(root_path, preserve_audio, add_music, edit_audio_db, audio_db),
+            args=(
+                root_path,
+                preserve_audio,
+                add_music,
+                normalize_audio,
+                edit_audio_db,
+                audio_db,
+            ),
             daemon=True,
         )
         self.thread.start()
@@ -156,6 +166,14 @@ def start():
     preserve_audio = _to_bool(request.form.get("preserve_audio"), default=False)
     add_music = _to_bool(request.form.get("add_music"), default=True)
 
+    # Normalize Audio (default: ON — sama dengan state awal checkbox di UI).
+    # Field tidak dikirim / kosong -> default True.
+    raw_normalize_audio = request.form.get("normalize_audio")
+    if raw_normalize_audio is None or str(raw_normalize_audio).strip() == "":
+        normalize_audio = True
+    else:
+        normalize_audio = _to_bool(raw_normalize_audio, default=True)
+
     # Edit Audio dB (default: off, audio_db=0)
     edit_audio_db = _to_bool(request.form.get("edit_audio_db"), default=False)
     audio_db = 0.0
@@ -186,6 +204,7 @@ def start():
         root_path,
         preserve_audio=preserve_audio,
         add_music=add_music,
+        normalize_audio=normalize_audio,
         edit_audio_db=edit_audio_db,
         audio_db=audio_db,
     )

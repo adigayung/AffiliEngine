@@ -13,6 +13,6 @@ Usage:
     scraper.run()
 """
 
-from .scraper import TikTokScraper
+from .scraper import TikTokScraper, MAX_VIDEOS, MAX_SCROLLS
 
-__all__ = ["TikTokScraper"]
+__all__ = ["TikTokScraper", "MAX_VIDEOS", "MAX_SCROLLS"]

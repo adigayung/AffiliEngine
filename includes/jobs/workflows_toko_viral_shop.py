@@ -163,7 +163,7 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 2500,
+    "delay": 8000,
     "status": "pending",
     "keterangan": "tekan 'Berikutnya' Lagi",
     "data": {
@@ -171,20 +171,6 @@ jobs_json = [
             "type": "point",
             "x": 779,
             "y": 2159
-        }
-    }
-},
-{
-    "id": 9,
-    "cmd": "click",
-    "delay": 3000,
-    "status": "pending",
-    "keterangan": "Checked 'Konfirmasi Penggunaan Music'",
-    "data": {
-        "target": {
-            "type": "point",
-            "x": 65,
-            "y": 2040
         }
     }
 },

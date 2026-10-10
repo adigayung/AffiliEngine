@@ -149,7 +149,7 @@ jobs_json = [
 {
     "id": 7,
     "cmd": "click",
-    "delay": 4000,
+    "delay": 6000,
     "status": "pending",
     "keterangan": "sudah select video tekan 'Berikutnya'",
     "data": {
@@ -163,7 +163,7 @@ jobs_json = [
 {
     "id": 8,
     "cmd": "click",
-    "delay": 4000,
+    "delay": 9000,
     "status": "pending",
     "keterangan": "tekan 'Berikutnya' Lagi",
     "data": {

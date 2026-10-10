@@ -343,6 +343,38 @@
 
                             <input
 
+                                id="normalizeAudio"
+
+                                class="form-check-input"
+
+                                type="checkbox"
+
+                                checked
+
+                                autocomplete="off">
+
+                            <span class="form-check-label">
+
+                                Normalize Audio
+
+                            </span>
+
+                        </label>
+
+                        <div class="form-hint">
+
+                            Jika dicentang, audio tiap file video dinormalisasi (level/loudness) sebelum digabungkan.
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-check form-switch">
+
+                            <input
+
                                 id="editAudioDb"
 
                                 class="form-check-input"
@@ -493,6 +525,7 @@
 const rootPath = document.getElementById("rootPath");
 const preserveAudio = document.getElementById("preserveAudio");
 const addMusic = document.getElementById("addMusic");
+const normalizeAudio = document.getElementById("normalizeAudio");
 const editAudioDb = document.getElementById("editAudioDb");
 const audioDbField = document.getElementById("audioDbField");
 const audioDb = document.getElementById("audioDb");
@@ -545,6 +578,8 @@ function setButtonState(running) {
 
         addMusic.disabled = true;
 
+        normalizeAudio.disabled = true;
+
         editAudioDb.disabled = true;
 
         audioDb.disabled = true;
@@ -569,6 +604,8 @@ function setButtonState(running) {
         preserveAudio.disabled = false;
 
         addMusic.disabled = false;
+
+        normalizeAudio.disabled = false;
 
         editAudioDb.disabled = false;
 
@@ -621,6 +658,8 @@ btnCreate.addEventListener("click", async function () {
     form.append("preserve_audio", preserveAudio.checked ? "1" : "0");
 
     form.append("add_music", addMusic.checked ? "1" : "0");
+
+    form.append("normalize_audio", normalizeAudio.checked ? "1" : "0");
 
     form.append("edit_audio_db", editAudioDb.checked ? "1" : "0");
 

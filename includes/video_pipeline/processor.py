@@ -5,17 +5,20 @@ Workflow:
   1. Scan root folder recursively for a.mp4 files.
   2. For each valid a.mp4 (with sound.json in same dir):
      a. decode_video(a.mp4) -> decode_output.mp4
-     b. add_sound(decode_output.mp4, music.mp3) -> sound_output.mp4
-     c. zoom_video(sound_output.mp4, 1.05) -> zoom_output.mp4
-     d. upscale_video(zoom_output.mp4) -> upscale_output.mp4
-     e. Move final output to job_dir/<name_from_schedule.json>
-     f. Clean up temporary files (only pipeline-created files)
+     b. normalize audio per-file (opsional, default ON) -> output_normalized.mp4
+     c. edit audio dB (opsional)
+     d. add_sound(...) -> sound_output.mp4
+     e. zoom_video(sound_output.mp4, 1.05) -> zoom_output.mp4
+     f. upscale_video(zoom_output.mp4) -> upscale_output.mp4
+     g. Move final output to job_dir/<name_from_schedule.json>
+     h. Clean up temporary files (only pipeline-created files)
   3. Report progress via callback (for realtime logging)
 """
 
 from pathlib import Path
 from typing import Callable, Optional, List
 import json
+import logging
 import shutil
 import subprocess
 
@@ -23,6 +26,10 @@ from includes.video_pipeline.decode_video import decode_single_video
 from includes.video_pipeline.add_sound import add_sound
 from includes.video_pipeline.zoom_video import zoom_video
 from includes.video_pipeline.upscale_video import upscale_video
+from includes.video_pipeline.audio_normalize import normalize_video_file
+
+
+logger = logging.getLogger(__name__)
 
 
 # ================================================================
@@ -271,6 +278,59 @@ def _adjust_audio_db(
 
 
 # ================================================================
+# Normalize Audio — per-file loudness/level normalization helper
+# ================================================================
+
+def _normalize_audio_step(
+    input_video: Path,
+    log_callback: Optional[Callable] = None,
+) -> Optional[Path]:
+    """Normalisasi audio satu file video (mp4) sebelum digabungkan.
+
+    Memanggil wrapper library ``normalize_video_file()`` dari
+    ``includes/video_pipeline/audio_normalize.py`` (bukan CLI) dan memakai
+    output hasil normalisasi sebagai input langkah pipeline berikutnya.
+
+    Args:
+        input_video: Path video input (hasil decode/merge).
+        log_callback: Optional log function.
+
+    Returns:
+        Path file hasil normalisasi bila berhasil, atau None bila dilewati
+        (video tanpa audio) atau gagal — pipeline lanjut dengan file asli.
+    """
+    def _log(msg: str):
+        print(msg)
+        if log_callback:
+            log_callback(msg)
+
+    if not _has_audio_stream(input_video):
+        _log("  [SKIP] Video tanpa audio, lewati normalize audio")
+        return None
+
+    output_path = input_video.with_stem(input_video.stem + "_normalized")
+
+    logger.info("Normalize audio: %s -> %s", input_video, output_path)
+
+    normalized_path = normalize_video_file(
+        str(input_video),
+        str(output_path),
+        log_callback=log_callback,
+    )
+
+    if not normalized_path:
+        _log("  [WARN] Normalize audio gagal, lanjut tanpa normalisasi")
+        return None
+
+    normalized = Path(normalized_path)
+    if not normalized.exists() or normalized.stat().st_size <= 0:
+        _log("  [WARN] Normalize audio: output kosong, lanjut tanpa normalisasi")
+        return None
+
+    return normalized
+
+
+# ================================================================
 # Cleanup — only delete pipeline-created temp files
 # ================================================================
 
@@ -306,6 +366,7 @@ def _process_single_folder(
     log_callback: Optional[Callable] = None,
     preserve_audio: bool = False,
     add_music: bool = True,
+    normalize_audio: bool = False,
     edit_audio_db: bool = False,
     audio_db: float = 0.0,
 ) -> bool:
@@ -317,6 +378,9 @@ def _process_single_folder(
         log_callback: Optional function to call for realtime log messages.
         preserve_audio: Jika True, audio asli video dipertahankan.
         add_music: Jika True, music dari sound.json ditambahkan.
+        normalize_audio: Jika True, audio tiap file mp4 dinormalisasi
+            (loudness/level) tepat setelah decode, sebelum edit audio dB
+            dan sebelum add_sound.
         edit_audio_db: Jika True, relative audio gain (dB) diterapkan.
         audio_db: Besar gain relatif dalam dB (0 = tanpa perubahan).
 
@@ -392,7 +456,21 @@ def _process_single_folder(
     # decode_output (output.mp4) adalah hasil decode, ini temp
     temp_files.append(str(decode_path.resolve()))
 
-    # -- Step 1b: Edit Audio dB (opsional, hanya aktif jika checkbox ON) --
+    # -- Step 1b: Normalize Audio (opsional, default ON di UI) --
+    # Dijalankan per-file mp4 SEBELUM langkah berikutnya (edit audio dB /
+    # add sound), sehingga level/dynamic range tiap file konsisten sebelum
+    # digabungkan.
+    if normalize_audio:
+        _log("  Normalize Audio...")
+        normalized_path = _normalize_audio_step(decode_path, log_callback)
+        if normalized_path is not None:
+            temp_files.append(str(normalized_path.resolve()))
+            decode_path = normalized_path
+            _log(f"  [OK] Normalize audio: {decode_path.name}")
+    else:
+        _log("  Normalize Audio: skip")
+
+    # -- Step 1c: Edit Audio dB (opsional, hanya aktif jika checkbox ON) --
     if edit_audio_db and audio_db != 0:
         _log(f"  Edit Audio dB: {audio_db:g} dB")
         adjusted_path = _adjust_audio_db(decode_path, audio_db, log_callback)
@@ -480,6 +558,7 @@ def create_video(
     log_callback: Optional[Callable] = None,
     preserve_audio: bool = False,
     add_music: bool = True,
+    normalize_audio: bool = False,
     edit_audio_db: bool = False,
     audio_db: float = 0.0,
 ) -> dict:
@@ -493,6 +572,9 @@ def create_video(
         log_callback: Optional callable(text: str) for realtime log updates.
         preserve_audio: Jika True, audio asli video dipertahankan (default False).
         add_music: Jika True, music dari sound.json ditambahkan (default True).
+        normalize_audio: Jika True, audio setiap file mp4 dinormalisasi
+            (loudness/level) sesudah decode dan sebelum edit audio dB /
+            add sound, supaya level tiap file konsisten sebelum digabungkan.
         edit_audio_db: Jika True, relative audio gain (dB) diterapkan pada audio video.
         audio_db: Besar gain relatif dalam dB (5, -3, 0). Diabaikan saat edit_audio_db=False.
 
@@ -514,6 +596,7 @@ def create_video(
     _log(f"Root: {root_path}")
     _log(f"Preserve Audio: {preserve_audio}")
     _log(f"Add Music: {add_music}")
+    _log(f"Normalize Audio: {normalize_audio}")
     _log(f"Edit Audio DB: {edit_audio_db}")
     _log(f"Audio DB: {audio_db:g} dB")
 
@@ -545,6 +628,7 @@ def create_video(
                 log_callback,
                 preserve_audio=preserve_audio,
                 add_music=add_music,
+                normalize_audio=normalize_audio,
                 edit_audio_db=edit_audio_db,
                 audio_db=audio_db,
             )
