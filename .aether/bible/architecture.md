@@ -234,3 +234,59 @@
 - created_at: 2026-10-04T05:42:01.263460+00:00
 - updated_at: 2026-10-04T05:42:01.263460+00:00
 - content: "PipelineRunner orchestrates the job; it holds a constructor parameter normalize_audio, propagates it via start() and _run_pipeline(), then passes it to create_video() / _process_single_folder()."
+
+## entry
+- id: 1a006cf6d8504c3593649ec7bc2204e3
+- source: consultant
+- confidence: 0.9
+- created_at: 2026-10-10T15:46:09.286865+00:00
+- updated_at: 2026-10-10T15:46:09.286865+00:00
+- content: "Halaman jadwal: POST /product_list/prepare_upload/jadwal (routers/product_list/index.py::prepare_jadwal) merender templates/product_list/prepare_jadwal.html (passing products=dict product->qty). Struktur: kontrol page-level radios name=\"distribution_method\" (existing|balanced) + input #upload_directory; nav-tabs dengan 5 pane via {% include %}: tabs/interval.html, tabs/fixed_time.html, tabs/weekly.html, tabs/pattern.html, tabs/import_schedule.html. Tombol Next per tab: #btnNext (interval, weekly, pattern), fixed tanpa id, import #btnGenerate. Semua inline <script> berbagi global: selectedProducts, getDistributionMethod(), submitFormWithFetch(), checkCreatorAndSubmit(), showCreatorModal() (di prepare_jadwal.html); uploadTimes+renderUploadTimes() (fixed); weeklySchedule+renderWeekly(day) (weekly); stages+stageCounter+renderStages() (pattern). Tab links: a[href=\"#tab-interval|#tab-fixed|#tab-weekly|#tab-pattern|#tab-import\"]."
+
+## entry
+- id: 084977bcfd5e44f4b366c9cd5f2a28ca
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Schedule preparation page templates/product_list/prepare_jadwal.html composes 5 tab partials via {% include %}: interval.html, fixed_time.html, weekly.html, pattern.html, import_schedule.html; a page-level radio name=\"distribution_method\" (values existing|balanced) sits above the tabs."
+
+## entry
+- id: 4ec57d4a29054c309dd786d3f40f0734
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "All method state lives in global JS scope shared across tabs on the single page (all inline <script> share one global scope), so export/import of schedule settings can be implemented entirely client-side without router, endpoint, table or DB changes."
+
+## entry
+- id: b571f301d5bf4015a50e96a6ac791735
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Backend endpoint /product_list/prepare_upload/import_analyze is used only for the legacy import format (JSON with a folders array); the new settings format must not reach it."
+
+## entry
+- id: ef4422ca44f4483e9f5eb3641c6aca49
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Schedule settings Save/Load is implemented entirely client-side in Jinja templates under templates/product_list/ — no new router endpoints, DB tables, or network requests for the new format. Submit contract (schedule_mode, distribution_method) is unchanged."
+
+## entry
+- id: 4c4279239ba449dcb0baabc3b31d6b88
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Template responsibilities: templates/product_list/prepare_jadwal.html owns shared helpers (SCHEDULE_SETTINGS_TYPE='upload_schedule_settings', downloadScheduleSettings, showTabForMethod, applyScheduleSettings); tabs/import_schedule.html owns analyzeImportFile(); tabs/fixed_time.html, interval.html, weekly.html, pattern.html own per-method save/apply functions."
+
+## entry
+- id: a1364e3fd3884ae6aff66e5d5a6e96db
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "applyScheduleSettings(data) dispatches by data.method (interval|fixed|weekly|pattern) to per-tab appliers (applyFixedSettings, applyIntervalSettings, applyWeeklySettings, applyPatternSettings), then calls showTabForMethod(method) and restores the distribution_method radio."

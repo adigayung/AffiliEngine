@@ -538,35 +538,172 @@ function analyzeImportFile() {
 
     reader.onload = function(e) {
 
+        var jsonData;
+
         try {
 
-            const jsonData = JSON.parse(e.target.result);
-
-            if (!jsonData.folders || !Array.isArray(jsonData.folders)) {
-
-                alert('Format file tidak valid. File harus memiliki key "folders" berupa array.');
-                return;
-            }
-
-            if (jsonData.folders.length === 0) {
-
-                alert('File tidak memiliki data folder.');
-                return;
-            }
-
-            sendForAnalysis(jsonData);
+            jsonData = JSON.parse(e.target.result);
 
         } catch (err) {
 
+            console.error('[schedule-settings] JSON.parse gagal:', err);
             alert('File JSON tidak valid: ' + err.message);
+            return;
 
         }
+
+        console.log("[schedule-settings] parsed:", jsonData);
+
+        // ==============================
+        // FORMAT BARU: upload_schedule_settings
+        // ==============================
+        if (jsonData && jsonData.type === 'upload_schedule_settings') {
+
+            applyNewScheduleSettings(jsonData);
+            return;
+
+        }
+
+        if (!jsonData || !jsonData.folders || !Array.isArray(jsonData.folders)) {
+
+            alert('Format file tidak valid. File harus memiliki key "folders" berupa array.');
+            return;
+        }
+
+        if (jsonData.folders.length === 0) {
+
+            alert('File tidak memiliki data folder.');
+            return;
+        }
+
+        sendForAnalysis(jsonData);
 
     };
 
     reader.readAsText(file);
 
 }
+
+/**
+ * applyNewScheduleSettings:
+ *   Terapkan file format baru "upload_schedule_settings".
+ *   Lookup fungsi global dilakukan SAAT RUNTIME klik (bukan saat load script),
+ *   sehingga tidak bergantung pada urutan include/urutan parsing script.
+ *   Setiap jalur gagal memberi alert + console.error/console.warn.
+ */
+function applyNewScheduleSettings(jsonData) {
+
+    const SUPPORTED_METHODS = ['interval', 'fixed', 'weekly', 'pattern'];
+
+    const methodLabels = {
+        interval: 'Interval',
+        fixed: 'Fixed Time',
+        weekly: 'Weekly',
+        pattern: 'Pattern'
+    };
+
+    const topLevelKeys = Object.keys(jsonData || {});
+
+    // 1. Fungsi load harus tersedia (lookup dinamis saat runtime klik)
+    var applyFn = (typeof window.applyScheduleSettings === 'function')
+        ? window.applyScheduleSettings
+        : null;
+
+    if (!applyFn) {
+
+        console.error(
+            '[schedule-settings] window.applyScheduleSettings tidak tersedia ' +
+            '(skrip prepare_jadwal.html belum ter-load?). keys file:',
+            topLevelKeys
+        );
+
+        alert(
+            'Fungsi load pengaturan tidak tersedia di halaman ini ' +
+            '(window.applyScheduleSettings undefined). ' +
+            'Silakan muat ulang halaman lalu coba lagi.'
+        );
+
+        return;
+
+    }
+
+    // 2. Validasi method
+    var method = jsonData.method;
+
+    if (!method || SUPPORTED_METHODS.indexOf(method) === -1) {
+
+        console.warn(
+            '[schedule-settings] method tidak dikenal:', method,
+            '| top-level keys:', topLevelKeys,
+            '| config keys:', Object.keys(jsonData.config || {})
+        );
+
+        alert(
+            'Format pengaturan tidak dikenal.\n' +
+            'Method yang terbaca: ' +
+            (method === undefined ? '(undefined)' : JSON.stringify(method)) + '\n' +
+            'Method yang didukung: ' + SUPPORTED_METHODS.join(', ') + '\n' +
+            'Key pada file: ' + topLevelKeys.join(', ')
+        );
+
+        return;
+
+    }
+
+    // 3. Config kosong: tetap lanjut, cukup peringatkan (tidak throw)
+    if (!jsonData.config || typeof jsonData.config !== 'object') {
+
+        console.warn(
+            '[schedule-settings] file tidak memiliki config untuk method "' +
+            method + '". top-level keys:', topLevelKeys
+        );
+
+    }
+
+    // 4. Apply dengan try/catch supaya error tidak menjadi kegagalan senyap
+    var applied;
+
+    try {
+
+        applied = applyFn(jsonData);
+
+    } catch (err) {
+
+        console.error('[schedule-settings] applyScheduleSettings throw:', err);
+
+        alert(
+            'Gagal memuat pengaturan (method: ' + method + '): ' + err.message
+        );
+
+        return;
+
+    }
+
+    if (applied) {
+
+        alert(
+            'Pengaturan berhasil dimuat. ' +
+            'Tab otomatis berpindah ke: ' +
+            (methodLabels[method] || method)
+        );
+
+    } else {
+
+        console.warn(
+            '[schedule-settings] applyScheduleSettings mengembalikan false ' +
+            'untuk method:', method, '| top-level keys:', topLevelKeys
+        );
+
+        alert(
+            'Pengaturan gagal dimuat (applyScheduleSettings mengembalikan false).\n' +
+            'Method: ' + method + '\n' +
+            'Key pada file: ' + topLevelKeys.join(', ')
+        );
+
+    }
+
+}
+
 
 function sendForAnalysis(jsonData) {
 

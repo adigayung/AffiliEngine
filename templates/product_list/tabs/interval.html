@@ -63,6 +63,16 @@
         <div class="d-flex justify-content-end">
 
             <button
+                type="button"
+                class="btn btn-outline-primary me-2"
+                onclick="saveIntervalSettings()">
+
+                <i class="ti ti-device-floppy me-2"></i>
+                Save
+
+            </button>
+
+            <button
                 id="btnNext"
                 type="button"
                 class="btn btn-primary"
@@ -128,4 +138,71 @@ function buatJadwal(){
     });
     
 }
+
+// ==============================
+// SAVE / LOAD INTERVAL SETTINGS
+// ==============================
+
+function getIntervalSaveConfig() {
+
+    var intervalHourRaw = document.getElementById("interval_hour").value;
+    var intervalHour = intervalHourRaw === "" ? null : parseFloat(intervalHourRaw);
+    if (isNaN(intervalHour)) {
+        intervalHour = null;
+    }
+
+    return {
+        start_time: document.getElementById("start_time").value,
+        interval_hour: intervalHour
+    };
+
+}
+
+function saveIntervalSettings() {
+
+    downloadScheduleSettings("interval", getIntervalSaveConfig());
+
+}
+
+function applyIntervalSettings(cfg) {
+
+    cfg = cfg || {};
+
+    if (!cfg.start_time && (cfg.interval_hour === undefined || cfg.interval_hour === null)) {
+
+        console.warn(
+            "[schedule-settings] applyIntervalSettings: config kosong / key " +
+            "start_time & interval_hour tidak ada. config keys yang dibaca:",
+            Object.keys(cfg)
+        );
+
+    }
+
+    // Normalisasi tipe: terima nilai string maupun number
+    if (cfg.start_time !== undefined && cfg.start_time !== null && cfg.start_time !== "") {
+
+        var startTimeField = document.getElementById("start_time");
+
+        if (startTimeField) {
+            startTimeField.value = String(cfg.start_time);
+        } else {
+            console.warn("[schedule-settings] applyIntervalSettings: #start_time tidak ditemukan");
+        }
+
+    }
+
+    if (cfg.interval_hour !== undefined && cfg.interval_hour !== null && cfg.interval_hour !== "") {
+
+        var intervalField = document.getElementById("interval_hour");
+
+        if (intervalField) {
+            intervalField.value = String(cfg.interval_hour);
+        } else {
+            console.warn("[schedule-settings] applyIntervalSettings: #interval_hour tidak ditemukan");
+        }
+
+    }
+
+}
+
 </script>

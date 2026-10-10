@@ -82,6 +82,16 @@
         <div class="d-flex justify-content-end">
 
             <button
+                type="button"
+                class="btn btn-outline-primary me-2"
+                onclick="saveFixedSettings()">
+
+                <i class="ti ti-device-floppy me-2"></i>
+                Save
+
+            </button>
+
+            <button
                 class="btn btn-primary"
                 onclick="sendFixedSchedule()">
 
@@ -232,4 +242,101 @@ function sendFixedSchedule() {
     });
 
 }
+
+// ==============================
+// SAVE / LOAD FIXED TIME SETTINGS
+// ==============================
+
+function getFixedSaveConfig() {
+
+    return {
+        upload_times: uploadTimes.slice()
+    };
+
+}
+
+function saveFixedSettings() {
+
+    downloadScheduleSettings("fixed", getFixedSaveConfig());
+
+}
+
+function applyFixedSettings(cfg) {
+
+    cfg = cfg || {};
+
+    // Toleransi key alternatif (file lama/manual): upload_times atau uploadTimes
+    var raw = Array.isArray(cfg.upload_times) ? cfg.upload_times
+        : (Array.isArray(cfg.uploadTimes) ? cfg.uploadTimes : null);
+
+    if (raw === null) {
+
+        if (!Array.isArray(cfg.upload_times) && !Array.isArray(cfg.uploadTimes)) {
+            console.warn(
+                "[schedule-settings] applyFixedSettings: key upload_times " +
+                "tidak ada / bukan array. config keys yang dibaca:",
+                Object.keys(cfg)
+            );
+        }
+
+        raw = [];
+
+    }
+
+    // Normalisasi: semua nilai menjadi string jam "HH:MM"
+    uploadTimes = raw
+        .map(function(value) {
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            return String(value);
+
+        })
+        .filter(function(value) {
+            return value !== "";
+        });
+
+    uploadTimes.sort();
+
+    renderUploadTimes();
+
+    // Verifikasi render: container TIDAK boleh tetap kosong bila uploadTimes ada
+    var container = document.getElementById("uploadTimeList");
+
+    if (uploadTimes.length > 0 && container) {
+
+        if (!container.querySelector("input.upload-time-item")) {
+
+            console.error(
+                "[schedule-settings] applyFixedSettings: render gagal, " +
+                "ulangi renderUploadTimes(). uploadTimes:",
+                uploadTimes.slice()
+            );
+
+            renderUploadTimes();
+
+            if (!container.querySelector("input.upload-time-item")) {
+                console.error(
+                    "[schedule-settings] applyFixedSettings: render tetap gagal " +
+                    "setelah percobaan kedua. container:",
+                    container
+                );
+            }
+
+        }
+
+    } else if (uploadTimes.length === 0) {
+
+        console.warn(
+            "[schedule-settings] applyFixedSettings: tidak ada jam yang dimuat " +
+            "(array kosong). config keys:",
+            Object.keys(cfg)
+        );
+
+    }
+
+}
+
 </script>

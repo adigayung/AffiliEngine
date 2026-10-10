@@ -186,3 +186,35 @@
 - created_at: 2026-10-04T05:51:01.878813+00:00
 - updated_at: 2026-10-04T05:51:01.878813+00:00
 - content: "No knowledge base exists for the underlying project: architecture, UI contracts, conventions, decisions, bugs, and gaps are all unobserved and must be re-derived from real work in future sessions."
+
+## entry
+- id: 7a502e694d614dbd9010fdefe5cea01a
+- source: consultant
+- confidence: 0.9
+- created_at: 2026-10-10T15:46:09.374527+00:00
+- updated_at: 2026-10-10T15:46:09.374527+00:00
+- content: "Halaman /product_list/prepare_upload/jadwal BELUM punya fitur Save/serialize settings (tidak ada createObjectURL/download di templates/product_list). Load memakai tab Import: input #import_file -> #btnAnalyze -> analyzeImportFile() (import_schedule.html) yang JSON.parse lalu cek key \"folders\" dan POST ke /product_list/prepare_upload/import_analyze (routers/product_list/index.py::import_analyze -> includes/schedule/import_analyzer.py::analyze_upload_schedule_from_data) menghasilkan pattern {initial_pattern, repeat_pattern, ...}. Requirement baru (belum diimplementasikan): tombol Save di kiri Next per tab metode (Interval/Fixed/Weekly/Pattern) yang menyimpan distribution_method + config tiap metode ke file JSON (download), dan load lewat tab Import dengan deteksi format baru \"upload_schedule_settings\" sebelum cek \"folders\"; abaikan upload_directory & semua Start Date saat save/load."
+
+## entry
+- id: bf905d346f8c48e7b73cc3d83d92f8af
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Upload Directory and all Start Date values are intentionally not saved and not restored on load (left empty) — a by-design limitation per requirements."
+
+## entry
+- id: 23523da6b40f492fac5928c5d6ae0465
+- source: ai
+- confidence: 0.7
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "All validation was done via a headless harness against a custom stdlib-rendered page, not the production runtime; the fix has not been observed in a real browser against the actual application server."
+
+## entry
+- id: a1afac5a55474f899d4aa6be3f900a20
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "#import_start_date is auto-populated with tomorrow's date by the Import tab's DOMContentLoaded handler on page load. This is pre-existing behavior unrelated to save/load, is not persisted to settings files, and was intentionally left unchanged (out of scope)."

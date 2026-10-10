@@ -57,6 +57,16 @@
         <div class="d-flex justify-content-end">
 
             <button
+                type="button"
+                class="btn btn-outline-primary me-2"
+                onclick="savePatternSettings()">
+
+                <i class="ti ti-device-floppy me-2"></i>
+                Save
+
+            </button>
+
+            <button
                 id="btnNext"
                 type="button"
                 class="btn btn-primary"
@@ -573,4 +583,81 @@ document.addEventListener('DOMContentLoaded', function() {
         renderStages();
     });
 });
+
+// ==============================
+// SAVE / LOAD PATTERN SETTINGS
+// ==============================
+
+function getPatternSaveConfig() {
+
+    return {
+        stages: stages.map(function(stage) {
+
+            return {
+                duration: stage.duration,
+                unit: stage.unit,
+                strategy: stage.strategy,
+                config: JSON.parse(JSON.stringify(stage.config || {}))
+            };
+
+        })
+    };
+
+}
+
+function savePatternSettings() {
+
+    downloadScheduleSettings("pattern", getPatternSaveConfig());
+
+}
+
+function applyPatternSettings(cfg) {
+
+    cfg = cfg || {};
+
+    var list = Array.isArray(cfg.stages) ? cfg.stages : [];
+
+    if (!Array.isArray(cfg.stages)) {
+
+        console.warn(
+            "[schedule-settings] applyPatternSettings: key stages tidak ada / " +
+            "bukan array. config keys yang dibaca:",
+            Object.keys(cfg)
+        );
+
+    }
+
+    stages = [];
+    stageCounter = 0;
+
+    list.forEach(function(item) {
+
+        if (!item || typeof item !== "object") {
+
+            console.warn(
+                "[schedule-settings] applyPatternSettings: stage bukan object, " +
+                "dilewati:",
+                item
+            );
+
+            return;
+
+        }
+
+        stageCounter++;
+
+        stages.push({
+            id: stageCounter,
+            duration: item.duration !== undefined ? String(item.duration) : "7",
+            unit: item.unit || 'days',
+            strategy: item.strategy || 'interval',
+            config: JSON.parse(JSON.stringify(item.config || {}))
+        });
+
+    });
+
+    renderStages();
+
+}
+
 </script>

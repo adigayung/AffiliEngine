@@ -562,3 +562,99 @@
 - created_at: 2026-10-04T05:51:01.878813+00:00
 - updated_at: 2026-10-04T05:51:01.878813+00:00
 - content: "No files were read and no code was produced during this session."
+
+## entry
+- id: 7d38a49e8a1c467e90920c4f0c35e09f
+- source: consultant
+- confidence: 0.9
+- created_at: 2026-10-10T15:46:09.348877+00:00
+- updated_at: 2026-10-10T15:46:09.348877+00:00
+- content: "Kontrak submit per schedule_mode pada halaman jadwal (dibaca UploadScheduler.__init__, includes/schedule/scheduler.py:52-174): interval -> start_time + interval_hour; fixed -> upload_times (JSON array HH:MM); weekly -> weekly_schedule (JSON object day->[times], day keys Monday..Sunday); pattern -> pattern (JSON array stage {duration, unit:[days|weeks|months|until_finish], strategy:[interval|fixed|weekly], config:{interval_hour,interval_minute | times:[...] | schedule:{...}}}); import_schedule -> import_pattern + import_times. Semua mode juga mengirim products, distribution_method, upload_directory, start_date. Endpoint: POST /product_list/prepare_upload/buat_jadwal."
+
+## entry
+- id: 8e81826a36694994ae1336dc02b988e2
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Shared helpers added in prepare_jadwal.html: downloadScheduleSettings(method, config), showTabForMethod(method), applyScheduleSettings(data) (returns false for unknown method)."
+
+## entry
+- id: d81ca2101eec4e8188d0535b526dd86a
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Each method tab added get<Method>SaveConfig(), save<Method>Settings(), apply<Method>Settings(cfg); import tab detected via analyzeImportFile()."
+
+## entry
+- id: bc6e4374f868488b884f81c6c341fe02
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Verification included: Jinja parsing of all 6 templates OK; node --check on combined rendered JS OK; Node stub-DOM round-trip tests for Save/Load of all 4 methods (correct JSON fields, no upload_directory/start_date, tab auto-switch, radio restored); new-format import triggers no fetch, legacy 'folders' import still fetches import_analyze once; project unit suite passes 70 tests."
+
+## entry
+- id: b6d0f25b435341c2a14370ab99790b82
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Pre-fix HEAD behavior: calling Save raised 'ReferenceError: saveFixedSettings is not defined' and every upload_schedule_settings file was rejected with alert 'Format file tidak valid. File harus memiliki key \"folders\" berupa array.' — the Save/Load block was never present in the rendered page, so the new-format path had no callable target."
+
+## entry
+- id: 21434030e07742fc8828beebbaf7eb23
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "The reported schema mismatch hypothesis was disproven: Save writes config.upload_times and apply reads cfg.upload_times; tab selector a[href=\"#tab-fixed\"] exists and maps to SCHEDULE_METHOD_TABS.fixed."
+
+## entry
+- id: 23a196311a204bba8f4f2d2d210906fc
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Fix covered 6 templates; no router, DB, or endpoint changes; file format schema unchanged (type/version/distribution_method/method/config) with only read-side tolerance added."
+
+## entry
+- id: 1d309c5d6aa04f6ab8dd7a2888695519
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "E2E Playwright headless against a stdlib server rendering the real templates + Bootstrap CDN: 34/34 checks passed covering AC-1..AC-7."
+
+## entry
+- id: aece22ec7b044c528e205d9768919fce
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Negative control (same harness on HEAD) produced 17 failing checks, confirming the tests detect the root cause."
+
+## entry
+- id: 614497b76363485b8ecd90ef286801dc
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "node --check passed on all inline <script> blocks (6 templates) and Jinja parse+render succeeded; project test suite reported 70 passed plus 6 subtests."
+
+## entry
+- id: 6ff065bb6d6a493195145764741e9e8a
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Legacy-format files (containing 'folders') still make exactly one POST to /product_list/prepare_upload/import_analyze and show the Pattern Editor."
+
+## entry
+- id: eeb48592a47d4e27bb1507aa9a1ce8a9
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "New-format load issues no network requests."

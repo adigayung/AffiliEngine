@@ -250,3 +250,51 @@
 - created_at: 2026-10-04T05:51:01.878813+00:00
 - updated_at: 2026-10-04T05:51:01.878813+00:00
 - content: "When observations carry no engineering signal, do not fabricate architecture, conventions, or bugs; emit empty category arrays rather than inventing plausible project details."
+
+## entry
+- id: aecb4bb8aa5943a7bf235bbcddbd48ef
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Because each method tab exposes its state as page-global variables, settings export/import can be implemented entirely client-side, avoiding any backend change."
+
+## entry
+- id: 7810871a848a4033b9ab29a581bda3ae
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Any new import format must be matched and short-circuited before the legacy folders branch, otherwise it would be POSTed to import_analyze."
+
+## entry
+- id: 6e5eb607d82b4f8c92d8d79af05d066f
+- source: ai
+- confidence: 0.85
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "A Node stub-DOM harness replaying the rendered page JS was effective for verifying client-side save/load round-trips without a browser."
+
+## entry
+- id: 1f995251c05f4d2d9564e9e6c32885b9
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Static source reading suggested the code was consistent; only executing the page (negative control on HEAD) revealed the Save/Load block was entirely absent — runtime harnesses are necessary to distinguish 'code wrong' from 'code never loaded'."
+
+## entry
+- id: 3fe93436195e4b8ab416ee7963424fab
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Inline script scoping is a real failure mode: typeof checks on const/let globals evaluated before the script runs return 'undefined', silently disabling new-format detection."
+
+## entry
+- id: a4c84f6ad3d041dc9e5d4106f2ca9e54
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Instrumenting with console.log of parsed JSON plus structured warn/error payloads (method, top-level keys, config keys) makes each failure class (bad type, unknown method, missing config, render failure) distinguishable in DevTools."

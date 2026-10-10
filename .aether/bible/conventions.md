@@ -274,3 +274,91 @@
 - created_at: 2026-10-04T05:42:01.263460+00:00
 - updated_at: 2026-10-04T05:42:01.263460+00:00
 - content: "Log each significant step clearly, e.g. `logger.info(\"Normalize audio: %s -> %s\", input, output)` and a header line `Normalize Audio: ...`."
+
+## entry
+- id: 6e7d2fd3ff064124abecf62ed1296315
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Do not rename existing shared state/functions: uploadTimes, weeklySchedule, stages, stageCounter, renderUploadTimes, renderWeekly, renderStages — only add new helpers alongside them."
+
+## entry
+- id: 898dd07eb9da439daa2776cf20d5078d
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Preserve existing per-method submit contracts (schedule_mode, distribution_method, etc.) and existing Next button behavior."
+
+## entry
+- id: 614037f3ed4f42358c1c63869eb529f1
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Legacy import format ('folders' array) must keep working 100% unchanged: after JSON.parse, the new-format check (jsonData.type === \"upload_schedule_settings\") must run BEFORE the folders check, and on match apply settings, show a success alert and return without calling import_analyze."
+
+## entry
+- id: 3e0f87e7de8043c49831f91977d0ef45
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "When applying loaded state, always re-render via existing render functions (renderUploadTimes(), renderWeekly(day) per day, renderStages()) to keep UI consistent."
+
+## entry
+- id: faf848c775414d2880b7f52b30bed6ef
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Change scope is limited to client-side template/JS in 6 files; no new endpoint, table, or DB, no router change."
+
+## entry
+- id: 649cb7c521a6400692f231fb333b7787
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Top-level const/let declarations in inline scripts do NOT attach to window; shared load helpers must be referenced explicitly as window.applyScheduleSettings and looked up dynamically at click runtime (not at parse time via typeof)."
+
+## entry
+- id: a45b59450edc47e6aa1450607c9ed4f5
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "No silent failures: every failure path must emit an informative alert plus console.error/console.warn naming the cause (unknown method, bad file type, load function unavailable, render failure)."
+
+## entry
+- id: 3f9e76777e38434ea36255f93529d8ac
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Apply functions must not throw on missing config (tolerate undefined data.config), must normalize input types (e.g. numeric times to 'HH:MM' strings), and should accept alternative key spellings (uploadTimes as alias of upload_times) for backward compatibility while writing only the canonical schema."
+
+## entry
+- id: 02488f6c16ae409c99674eebfb7b13ec
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Do not reorder tab script includes to fix load-timing issues; fix by deferring lookup until runtime click. Do not touch Upload Directory/Start Date, the legacy folders import flow, or the Next-button submit contract."
+
+## entry
+- id: a3ca41f867844cf5b0f087605e997faf
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Preserve existing state/global names: uploadTimes, weeklySchedule, stages, renderUploadTimes, renderWeekly, renderStages."
+
+## entry
+- id: 7f839f6ff58644bd8a3923d8834d29a9
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "When applying schedule settings, dispatch a synthetic 'change' event on the selected distribution_method radio so downstream state handlers actually run."

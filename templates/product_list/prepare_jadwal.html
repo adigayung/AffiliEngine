@@ -683,6 +683,277 @@ function updateHeaderCreator(creatorId) {
 
 }
 
+// ==============================
+// SAVE / LOAD SCHEDULE SETTINGS
+// ==============================
+
+const SCHEDULE_SETTINGS_TYPE = "upload_schedule_settings";
+const SCHEDULE_SETTINGS_VERSION = 1;
+
+const SCHEDULE_METHOD_TABS = {
+    interval: "#tab-interval",
+    fixed: "#tab-fixed",
+    weekly: "#tab-weekly",
+    pattern: "#tab-pattern"
+};
+
+/**
+ * downloadScheduleSettings:
+ *   Bangun file JSON berisi Metode Penyebaran Video + method aktif +
+ *   konfigurasi method tersebut, lalu trigger download di browser.
+ *   Upload Directory & Start Date TIDAK disertakan.
+ */
+function downloadScheduleSettings(method, config) {
+
+    var payload = {
+        type: SCHEDULE_SETTINGS_TYPE,
+        version: SCHEDULE_SETTINGS_VERSION,
+        distribution_method: getDistributionMethod(),
+        method: method,
+        config: config || {}
+    };
+
+    var json = JSON.stringify(payload, null, 2);
+    var blob = new Blob([json], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "upload_schedule_settings_" + method + ".json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+}
+
+/**
+ * activateNavLinkManually:
+ *   Fallback tanpa Bootstrap: aktifkan nav-link + tab-pane secara manual,
+ *   agar perpindahan tab TIDAK pernah gagal senyap.
+ */
+function activateNavLinkManually(link) {
+
+    // Non-aktifkan semua nav-link & tab-pane di halaman yang sama
+    document
+        .querySelectorAll('ul.nav-tabs a.nav-link')
+        .forEach(function(item) {
+
+            var pane = document.querySelector(item.getAttribute('href'));
+
+            item.classList.remove('active');
+            item.removeAttribute('aria-selected');
+
+            if (pane) {
+                pane.classList.remove('active', 'show');
+            }
+
+        });
+
+    link.classList.add('active');
+    link.setAttribute('aria-selected', 'true');
+
+    var targetPane = document.querySelector(link.getAttribute('href'));
+
+    if (targetPane) {
+        targetPane.classList.add('active', 'show');
+    } else {
+
+        console.warn(
+            '[schedule-settings] tab-pane tidak ditemukan untuk ' +
+            link.getAttribute('href')
+        );
+
+    }
+
+}
+
+/**
+ * showTabForMethod:
+ *   Aktifkan tab metode yang sesuai dengan nama method.
+ *   Tidak pernah gagal senyap: bila bootstrap tidak tersedia atau
+ *   getOrCreateInstance melempar error, dipakai fallback manual.
+ */
+function showTabForMethod(method) {
+
+    var selector = SCHEDULE_METHOD_TABS[method];
+
+    if (!selector) {
+
+        console.warn(
+            '[schedule-settings] showTabForMethod: method tidak dikenal:',
+            method
+        );
+
+        return false;
+
+    }
+
+    var link = document.querySelector(
+        'ul.nav-tabs a[href="' + selector + '"]'
+    );
+
+    if (!link) {
+
+        console.warn(
+            '[schedule-settings] showTabForMethod: nav-link tidak ditemukan: ' +
+            selector
+        );
+
+        return false;
+
+    }
+
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tab) {
+
+        console.warn(
+            '[schedule-settings] bootstrap.Tab tidak tersedia, ' +
+            'memakai fallback aktivasi manual untuk ' + selector
+        );
+
+        activateNavLinkManually(link);
+
+        return true;
+
+    }
+
+    try {
+
+        var tab = bootstrap.Tab.getOrCreateInstance(link);
+        tab.show();
+
+        return true;
+
+    } catch (err) {
+
+        console.warn(
+            '[schedule-settings] bootstrap.Tab.show() gagal, ' +
+            'memakai fallback manual: ' + err.message
+        );
+
+        activateNavLinkManually(link);
+
+        return true;
+
+    }
+
+}
+
+/**
+ * applyScheduleSettings:
+ *   Pulihkan radio Metode Penyebaran Video, isi field method terkait,
+ *   lalu pindahkan tab ke method tersebut.
+ *   TIDAK pernah gagal senyap: setiap jalur gagal mengembalikan false dan
+ *   mencatat console.warn berisi sebab + key file yang terbaca.
+ */
+function applyScheduleSettings(data) {
+
+    var SUPPORTED_METHODS = ["interval", "fixed", "weekly", "pattern"];
+
+    if (!data || typeof data !== "object") {
+
+        console.warn(
+            '[schedule-settings] applyScheduleSettings: data kosong/bukan object:',
+            data
+        );
+
+        return false;
+
+    }
+
+    var method = data.method;
+
+    if (!method || SUPPORTED_METHODS.indexOf(method) === -1) {
+
+        console.warn(
+            '[schedule-settings] applyScheduleSettings: method tidak dikenal:',
+            method,
+            '| top-level keys:',
+            Object.keys(data),
+            '| config keys:',
+            Object.keys(data.config || {})
+        );
+
+        return false;
+
+    }
+
+    var appliers = {
+        interval: typeof applyIntervalSettings === "function" ? applyIntervalSettings : null,
+        fixed: typeof applyFixedSettings === "function" ? applyFixedSettings : null,
+        weekly: typeof applyWeeklySettings === "function" ? applyWeeklySettings : null,
+        pattern: typeof applyPatternSettings === "function" ? applyPatternSettings : null
+    };
+
+    if (!appliers[method]) {
+
+        console.warn(
+            '[schedule-settings] applyScheduleSettings: applier untuk method "' +
+            method + '" belum ter-load. Tersedia:',
+            Object.keys(appliers).filter(function(key) {
+                return !!appliers[key];
+            })
+        );
+
+        return false;
+
+    }
+
+    // Config wajib ada; kalau hilang, tetap lanjut dengan warning (tidak throw)
+    if (!data.config || typeof data.config !== "object") {
+
+        console.warn(
+            '[schedule-settings] config kosong untuk method "' + method +
+            '". top-level keys file:',
+            Object.keys(data)
+        );
+
+    }
+
+    // Pulihkan Metode Penyebaran Video
+    if (data.distribution_method) {
+
+        var radios = document.querySelectorAll(
+            'input[name="distribution_method"]'
+        );
+
+        for (var i = 0; i < radios.length; i++) {
+
+            radios[i].checked = (radios[i].value === data.distribution_method);
+
+        }
+
+        for (var j = 0; j < radios.length; j++) {
+
+            if (radios[j].checked) {
+
+                // Trigger handler perubahan state (bila ada) supaya
+                // metode penyebaran benar-benar aktif.
+                radios[j].dispatchEvent(
+                    new Event("change", { bubbles: true })
+                );
+
+                break;
+
+            }
+
+        }
+
+    }
+
+    // Isi konfigurasi method (Upload Directory & Start Date sengaja tidak disentuh).
+    // Config dikirim sebagai object baru (bukan copy) agar modifikasi applier
+    // tidak merusak data aslinya; applier sendiri harus toleran bila config {}.
+    appliers[method](data.config || {});
+
+    // Pindah ke tab method yang dimuat
+    showTabForMethod(method);
+
+    return true;
+
+}
+
 </script>
 
 {% endblock %}

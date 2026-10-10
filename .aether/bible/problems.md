@@ -234,3 +234,35 @@
 - created_at: 2026-10-04T05:51:01.878813+00:00
 - updated_at: 2026-10-04T05:51:01.878813+00:00
 - content: "The observation set provides zero recoverable project knowledge, so any durable extraction about a software system is impossible from this source."
+
+## entry
+- id: 627c63bc92c04955a2dd18854727400f
+- source: ai
+- confidence: 0.8
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "No persistent storage backend: settings only survive as downloaded JSON files reloaded via the Import tab; there is no server-side config store."
+
+## entry
+- id: 7d2100eba6474b49ad211d6c48c13ef1
+- source: ai
+- confidence: 0.7
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "All method tabs share one global JS scope, so duplicate/global name collisions are a risk when adding new helpers."
+
+## entry
+- id: 6f9eb7b25a49485ba787e0f7ca232865
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Silent-failure UX: previously no feedback distinguished unknown method, JS error, empty upload_times, or render failure; mitigated by mandatory alerts + console diagnostics in the fix."
+
+## entry
+- id: 1275894fd79946528ec3fa4dd8798741
+- source: ai
+- confidence: 0.6
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Headless E2E harness relies on a stdlib server + Bootstrap CDN rather than the real app stack, so browser-environment differences could mask issues not covered by the 34 checks."

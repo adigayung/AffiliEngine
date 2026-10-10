@@ -122,3 +122,75 @@
 - created_at: 2026-10-04T05:42:01.263460+00:00
 - updated_at: 2026-10-04T05:42:01.263460+00:00
 - content: "Normalize Audio checkbox defaults to checked (ON) via HTML `checked` attribute, and is submitted as form.append(\"normalize_audio\", checked ? \"1\" : \"0\"), disabled/enabled together with others in setButtonState()."
+
+## entry
+- id: 9372b191dbda4b4a88c3988f0a4bdcf6
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Each method tab (Interval, Fixed Time, Weekly, Pattern) has its own Next button: interval -> buatJadwal() (#btnNext), fixed -> sendFixedSchedule() (no id), weekly -> submitWeeklySchedule() (#btnNext), pattern -> submitPattern() (#btnNext), import -> generateFromImport() (#btnGenerate)."
+
+## entry
+- id: 74e2628f4059405ab55a1a6d204f6d5d
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Save button is a type=\"button\" element with class \"btn btn-outline-primary me-2\" and icon ti-device-floppy, placed inside the d-flex justify-content-end block BEFORE the Next button on each of the 4 method tabs."
+
+## entry
+- id: 5567ad34a0d740c38da33372656d237f
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Method-to-tab mapping used for auto-switching: interval->#tab-interval, fixed->#tab-fixed, weekly->#tab-weekly, pattern->#tab-pattern; tab activated via bootstrap.Tab.getOrCreateInstance(document.querySelector('ul.nav-tabs a[href=\"<sel>\"]')).show()."
+
+## entry
+- id: d25b5981529847c2bbbffff59b6f2f71
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Start Date inputs exist in 4 separate places (#start_date, #fixed_start_date, #weekly_start_date, #pattern_start_date) plus #import_start_date, and Upload Directory is #upload_directory — all are intentionally ignored (never saved, never filled on load)."
+
+## entry
+- id: 3ef27057e66c4b678fccef4a053fe2c5
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "On tab Interval, #start_time is the starting hour (not a Start Date) and is persisted as config.start_time."
+
+## entry
+- id: b2f578ac468d48ccabe422f048768a82
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Each method tab has a Save button producing a file named upload_schedule_settings_<method>.json with schema {type:'upload_schedule_settings', version, distribution_method, method, config}. Fixed config uses config.upload_times (array)."
+
+## entry
+- id: be19eb3aabd34642bee1135fa56bf8b8
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Import tab button 'Analyze & Extract Pattern' (#btnAnalyze) routes files containing top-level 'folders' to POST /product_list/prepare_upload/import_analyze (legacy Pattern Editor flow); files with type='upload_schedule_settings' bypass that endpoint entirely."
+
+## entry
+- id: ceb5422ef2a94075b903fdb0888cc74c
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Fixed-tab render contract: #uploadTimeList must contain input.upload-time-item rows; the empty-state text 'No upload time added.' indicates render failure if upload_times is non-empty."
+
+## entry
+- id: 780335c9bfb94f03ab49e53099ec9f09
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Upload Directory (#upload_directory) and Start Date fields (#start_date, #fixed_start_date, #weekly_start_date, #pattern_start_date, #import_start_date) must remain empty after loading a settings file. Note: #import_start_date is auto-filled with tomorrow's date by the Import tab's own DOMContentLoaded handler (pre-existing behavior, not part of save/load)."

@@ -143,6 +143,17 @@
 
 
             <button
+                type="button"
+                class="btn btn-outline-primary me-2"
+                onclick="saveWeeklySettings()">
+
+                <i class="ti ti-device-floppy me-2"></i>
+                Save
+
+            </button>
+
+
+            <button
                 id="btnNext"
                 type="button"
                 class="btn btn-primary"
@@ -391,4 +402,70 @@ function submitWeeklySchedule(){
     });
 
 }
+
+// ==============================
+// SAVE / LOAD WEEKLY SETTINGS
+// ==============================
+
+function getWeeklySaveConfig() {
+
+    return {
+        weekly_schedule: JSON.parse(JSON.stringify(weeklySchedule))
+    };
+
+}
+
+function saveWeeklySettings() {
+
+    downloadScheduleSettings("weekly", getWeeklySaveConfig());
+
+}
+
+function applyWeeklySettings(cfg) {
+
+    cfg = cfg || {};
+
+    // Toleransi key alternatif: weekly_schedule atau weeklySchedule
+    var schedule = cfg.weekly_schedule || cfg.weeklySchedule || null;
+
+    if (!schedule || typeof schedule !== "object") {
+
+        console.warn(
+            "[schedule-settings] applyWeeklySettings: key weekly_schedule " +
+            "tidak ada / bukan object. config keys yang dibaca:",
+            Object.keys(cfg)
+        );
+
+        schedule = {};
+
+    }
+
+    Object.keys(weeklySchedule).forEach(function(day) {
+
+        var raw = schedule[day];
+
+        var times = Array.isArray(raw)
+            ? raw.map(function(value) {
+                return (value === null || value === undefined) ? "" : String(value);
+            }).filter(function(value) {
+                return value !== "";
+            })
+            : [];
+
+        if (!Array.isArray(raw) && raw !== undefined) {
+            console.warn(
+                "[schedule-settings] applyWeeklySettings: jadwal hari " + day +
+                " bukan array, diabaikan:",
+                raw
+            );
+        }
+
+        times.sort();
+        weeklySchedule[day] = times;
+        renderWeekly(day);
+
+    });
+
+}
+
 </script>

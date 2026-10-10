@@ -66,3 +66,11 @@
 - created_at: 2026-09-23T19:00:49.087344+00:00
 - updated_at: 2026-09-23T19:00:49.087344+00:00
 - content: "Bug: In unlimited mode, _scroll_until_done runs up to MAX_SCROLLS=500 with no early stop based on video count."
+
+## entry
+- id: c59f164ab9694b7fa465581d00296801
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "RESOLVED — upload_schedule_settings import did not populate Fixed Time (and other) tabs; root cause was the Save/Load block missing from the rendered page, so new-format detection never executed and files fell through to the legacy 'folders' validation alert."

@@ -234,3 +234,59 @@
 - created_at: 2026-10-04T05:51:01.878813+00:00
 - updated_at: 2026-10-04T05:51:01.878813+00:00
 - content: "Task explicitly instructed: do not write any code, do not read any files, respond only with 'hallo'. Compliance was the goal over any engineering outcome."
+
+## entry
+- id: 0fa4ec291c534b519f13b9869367e94c
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "New settings JSON schema: {type:\"upload_schedule_settings\", version:1, distribution_method:\"existing\"|\"balanced\", method:\"interval\"|\"fixed\"|\"weekly\"|\"pattern\", config:{...}}. Per-method config: interval {start_time, interval_hour}; fixed {upload_times:[...]}; weekly {weekly_schedule:{Monday..Sunday:[...]}}; pattern {stages:[{duration,unit:\"days\"|\"weeks\"|\"months\"|\"until_finish\", strategy:\"interval\"|\"fixed\"|\"weekly\", config:{interval_hour/interval_minute|times[]|schedule{}}}]}."
+
+## entry
+- id: 7bdf633e947f48c6a02e24aec9810f31
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Save exports only the currently filled method's config (no merging across methods), plus distribution_method and the active method."
+
+## entry
+- id: 0211447f3ed44f789604824b5666b1c2
+- source: ai
+- confidence: 0.95
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Settings download is done purely client-side via JSON.stringify -> Blob -> temporary <a download> (filename upload_schedule_settings_<method>.json) -> revokeObjectURL; no network request."
+
+## entry
+- id: 2e8e5361c2e94e3aa370ead213153af0
+- source: ai
+- confidence: 0.9
+- created_at: 2026-10-10T16:09:44.054903+00:00
+- updated_at: 2026-10-10T16:09:44.054903+00:00
+- content: "Applied changes touch 6 templates only: prepare_jadwal.html (shared helpers), interval.html, fixed_time.html, weekly.html, pattern.html, import_schedule.html. Routers/product_list/index.py unchanged."
+
+## entry
+- id: 3a6cd9a9c4a34ead9d6d6cf7c8023975
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "Split analyzeImportFile() into JSON.parse (own try/catch) plus a new applyNewScheduleSettings() that performs dynamic lookup and invocation of the handler; new-format detection no longer depends on the global function existing at handler-registration time."
+
+## entry
+- id: 5777e6fed50a4648a3569fc48f3c0307
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "showTabForMethod() gained a manual fallback (activateNavLinkManually) toggling 'active'/'show' classes when bootstrap or bootstrap.Tab is unavailable or .show() throws."
+
+## entry
+- id: b8f617d92cea4068a2730d00d9ad6f8c
+- source: ai
+- confidence: 1.0
+- created_at: 2026-10-10T16:46:34.272274+00:00
+- updated_at: 2026-10-10T16:46:34.272274+00:00
+- content: "applyFixedSettings normalizes both upload_times and uploadTimes, coerces values to 'HH:MM' strings, then verifies the DOM render and retries renderUploadTimes() once with console.error on failure."
